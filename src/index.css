@@ -1,0 +1,72 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --toka-bg-primary: #F5F7F2;
+  --toka-bg-secondary: #EAEFE6;
+  --toka-bg-card: #FFFFFF;
+  --toka-accent: #C6FF69;
+  --toka-accent-ink: #121512;
+  --toka-accent-text: #3F6212;
+  --toka-text-primary: #121512;
+  --toka-text-secondary: #586359;
+  --toka-border: #D6DFD4;
+}
+
+.dark {
+  --toka-bg-primary: #121512;
+  --toka-bg-secondary: #1B201C;
+  --toka-bg-card: #202620;
+  --toka-accent: #C6FF69;
+  --toka-accent-ink: #121512;
+  --toka-accent-text: #C6FF69;
+  --toka-text-primary: #F5F7F2;
+  --toka-text-secondary: #929B93;
+  --toka-border: #303730;
+}
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: var(--toka-bg-primary);
+    color: var(--toka-text-primary);
+    letter-spacing: 0.005em;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  .font-mono-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--toka-border);
+  border-radius: 9999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
