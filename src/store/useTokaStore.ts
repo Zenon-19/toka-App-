@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { deleteUser, signInWithPopup, signOut } from 'firebase/auth';
+import { deleteUser, signOut } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { auth, googleAuthProvider } from '../lib/firebase.ts';
+import { auth } from '../lib/firebase.ts';
+import { signInWithGoogleResilient } from '../lib/googleAuth.ts';
 import { setInMemoryToken, tokaApi } from '../services/api.ts';
 import type {
   AppScreen,
@@ -13,6 +14,7 @@ import type {
   UserSettings,
 } from '../types/index.ts';
 import { getBrowserTimezone, getTodayInTimezone } from '../utils/date.ts';
+import { attachHabitStreaks } from '../utils/habitLogic.ts';
 
 export interface ToastMessage {
   id: number;
@@ -128,7 +130,7 @@ export const useTokaStore = create<TokaState>((set, get) => ({
   signInWithGoogle: async () => {
     set({ authLoading: true, authError: null });
     try {
-      const result = await signInWithPopup(auth, googleAuthProvider);
+      const result = await signInWithGoogleResilient();
       const token = await result.user.getIdToken();
       setInMemoryToken(token);
       set({ firebaseUser: result.user, authLoading: false });
@@ -179,7 +181,7 @@ export const useTokaStore = create<TokaState>((set, get) => ({
       set({
         profile: data.user,
         settings: data.settings,
-        habits: data.habits,
+        habits: attachHabitStreaks(data.habits, data.completions, todayInUserTz),
         completions: data.completions,
         selectedDate: todayInUserTz,
         workspaceLoading: false,
@@ -232,7 +234,12 @@ export const useTokaStore = create<TokaState>((set, get) => ({
   createHabit: async (input) => {
     try {
       const created = await tokaApi.createHabit(input);
-      set((state) => ({ habits: [...state.habits, created] }));
+      set((state) => {
+        const todayStr = getTodayInTimezone(state.settings?.timezone || getBrowserTimezone());
+        return {
+          habits: attachHabitStreaks([...state.habits, created], state.completions, todayStr),
+        };
+      });
       get().showToast('success', `"${created.title}" added to your routine.`);
       return created;
     } catch (error: unknown) {
@@ -246,13 +253,16 @@ export const useTokaStore = create<TokaState>((set, get) => ({
     try {
       const created = await tokaApi.createHabitsBatch(items);
       const updatedSettings = await tokaApi.updateSettings({ onboardingCompleted: true });
-      set((state) => ({
-        habits: [...state.habits, ...created],
-        settings: updatedSettings,
-        activeTab: 'home',
-        activeScreen: 'home',
-        showOnboardingPreview: false,
-      }));
+      set((state) => {
+        const todayStr = getTodayInTimezone(updatedSettings.timezone || getBrowserTimezone());
+        return {
+          habits: attachHabitStreaks([...state.habits, ...created], state.completions, todayStr),
+          settings: updatedSettings,
+          activeTab: 'home',
+          activeScreen: 'home',
+          showOnboardingPreview: false,
+        };
+      });
       if (created.length > 0) {
         get().showToast('success', `Added ${created.length} starter habits.`);
       }
@@ -265,9 +275,13 @@ export const useTokaStore = create<TokaState>((set, get) => ({
   updateHabit: async (habitId, updates) => {
     try {
       const updated = await tokaApi.updateHabit(habitId, updates);
-      set((state) => ({
-        habits: state.habits.map((h) => (h.id === habitId ? updated : h)),
-      }));
+      set((state) => {
+        const todayStr = getTodayInTimezone(state.settings?.timezone || getBrowserTimezone());
+        const nextHabits = state.habits.map((h) => (h.id === habitId ? updated : h));
+        return {
+          habits: attachHabitStreaks(nextHabits, state.completions, todayStr),
+        };
+      });
       get().showToast('success', 'Habit updated.');
       return updated;
     } catch (error: unknown) {
@@ -294,13 +308,15 @@ export const useTokaStore = create<TokaState>((set, get) => ({
   },
 
   toggleCompletion: async (habitId, dateStr) => {
+    const prevHabits = get().habits;
     const prevCompletions = get().completions;
+    const todayStr = getTodayInTimezone(get().settings?.timezone || getBrowserTimezone());
     const existing = prevCompletions.find(
       (c) => c.habitId === habitId && c.completionDate === dateStr
     );
     const nextCompleted = !(existing?.completed === true);
 
-    // Optimistic update
+    // Optimistic update (completions + recalculated habit streaks)
     const optimisticList: HabitCompletion[] = existing
       ? prevCompletions.map((c) =>
           c.habitId === habitId && c.completionDate === dateStr
@@ -319,7 +335,10 @@ export const useTokaStore = create<TokaState>((set, get) => ({
           },
         ];
 
-    set({ completions: optimisticList });
+    set({
+      completions: optimisticList,
+      habits: attachHabitStreaks(prevHabits, optimisticList, todayStr),
+    });
 
     try {
       const saved = await tokaApi.toggleCompletion(habitId, dateStr, nextCompleted);
@@ -327,17 +346,20 @@ export const useTokaStore = create<TokaState>((set, get) => ({
         const hasExisting = state.completions.some(
           (c) => c.habitId === habitId && c.completionDate === dateStr
         );
+        const syncedCompletions = hasExisting
+          ? state.completions.map((c) =>
+              c.habitId === habitId && c.completionDate === dateStr ? saved : c
+            )
+          : [...state.completions, saved];
+        const currentToday = getTodayInTimezone(state.settings?.timezone || getBrowserTimezone());
         return {
-          completions: hasExisting
-            ? state.completions.map((c) =>
-                c.habitId === habitId && c.completionDate === dateStr ? saved : c
-              )
-            : [...state.completions, saved],
+          completions: syncedCompletions,
+          habits: attachHabitStreaks(state.habits, syncedCompletions, currentToday),
         };
       });
     } catch (error: unknown) {
       // Rollback
-      set({ completions: prevCompletions });
+      set({ completions: prevCompletions, habits: prevHabits });
       const message = error instanceof Error ? error.message : 'Could not update completion.';
       get().showToast('error', message);
     }
@@ -362,10 +384,15 @@ export const useTokaStore = create<TokaState>((set, get) => ({
       if (typeof document !== 'undefined') {
         document.documentElement.classList.toggle('dark', updated.theme !== 'light');
       }
-      set({ settings: updated });
-      if (updates.timezone) {
-        set({ selectedDate: getTodayInTimezone(updates.timezone) });
-      }
+      set((state) => {
+        const tz = updated.timezone || getBrowserTimezone();
+        const todayStr = getTodayInTimezone(tz);
+        return {
+          settings: updated,
+          habits: attachHabitStreaks(state.habits, state.completions, todayStr),
+          ...(updates.timezone ? { selectedDate: todayStr } : {}),
+        };
+      });
       if (updates.onboardingCompleted === undefined) {
         get().showToast('success', 'Preferences updated.');
       }

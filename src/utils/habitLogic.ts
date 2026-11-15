@@ -1,20 +1,40 @@
 import { WEEKDAYS_LABELS } from '../constants/habits.ts';
-import type { DailySummary, Habit, HabitCompletion, HabitStats } from '../types/index.ts';
+import type {
+  DailySummary,
+  HabitCompletion,
+  HabitFrequency,
+  HabitStats,
+} from '../types/index.ts';
 import { addDays, getDateRange, getDayOfWeekUTC } from './date.ts';
 
-export function getEffectiveSelectedDays(habit: Pick<Habit, 'frequency' | 'selectedDays'>): number[] {
+export interface StreakSchedulableHabit {
+  id: string;
+  frequency: HabitFrequency | string;
+  selectedDays: number[];
+  startDate: string;
+  status?: string;
+}
+
+export function getEffectiveSelectedDays(
+  habit: Pick<StreakSchedulableHabit, 'frequency' | 'selectedDays'>
+): number[] {
   if (habit.frequency === 'daily') return [0, 1, 2, 3, 4, 5, 6];
   if (habit.frequency === 'weekdays') return [1, 2, 3, 4, 5];
   return habit.selectedDays.length > 0 ? habit.selectedDays : [0, 1, 2, 3, 4, 5, 6];
 }
 
-export function isHabitScheduledOnDate(habit: Habit, dateStr: string): boolean {
+export function isHabitScheduledOnDate(
+  habit: Pick<StreakSchedulableHabit, 'frequency' | 'selectedDays' | 'startDate'>,
+  dateStr: string
+): boolean {
   if (dateStr < habit.startDate) return false;
   const day = getDayOfWeekUTC(dateStr);
   return getEffectiveSelectedDays(habit).includes(day);
 }
 
-export function formatFrequencySummary(habit: Pick<Habit, 'frequency' | 'selectedDays'>): string {
+export function formatFrequencySummary(
+  habit: Pick<StreakSchedulableHabit, 'frequency' | 'selectedDays'>
+): string {
   if (habit.frequency === 'daily') return 'Every day';
   if (habit.frequency === 'weekdays') return 'Weekdays (Mon–Fri)';
   const sorted = [...new Set(habit.selectedDays)].sort((a, b) => a - b);
@@ -23,7 +43,9 @@ export function formatFrequencySummary(habit: Pick<Habit, 'frequency' | 'selecte
   return sorted.map((d) => WEEKDAYS_LABELS[d]).join(', ');
 }
 
-export function buildCompletionLookup(completions: HabitCompletion[]): Map<string, boolean> {
+export function buildCompletionLookup(
+  completions: Pick<HabitCompletion, 'habitId' | 'completionDate' | 'completed'>[]
+): Map<string, boolean> {
   const map = new Map<string, boolean>();
   for (const c of completions) {
     if (c.completed) {
@@ -42,7 +64,7 @@ export function isHabitCompletedOnDate(
 }
 
 export function calculateHabitStats(
-  habit: Habit,
+  habit: StreakSchedulableHabit,
   lookup: Map<string, boolean>,
   todayStr: string
 ): HabitStats {
@@ -107,8 +129,24 @@ export function calculateHabitStats(
   };
 }
 
+export function attachHabitStreaks<T extends StreakSchedulableHabit>(
+  habitsList: T[],
+  completions: Pick<HabitCompletion, 'habitId' | 'completionDate' | 'completed'>[],
+  todayStr: string
+): (T & { streak: number; bestStreak: number })[] {
+  const lookup = buildCompletionLookup(completions);
+  return habitsList.map((habit) => {
+    const stats = calculateHabitStats(habit, lookup, todayStr);
+    return {
+      ...habit,
+      streak: stats.currentStreak,
+      bestStreak: stats.bestStreak,
+    };
+  });
+}
+
 export function getDailySummary(
-  habits: Habit[],
+  habits: StreakSchedulableHabit[],
   lookup: Map<string, boolean>,
   dateStr: string
 ): DailySummary {
@@ -127,7 +165,7 @@ export function getDailySummary(
 }
 
 export function calculateOverallStreaks(
-  habits: Habit[],
+  habits: StreakSchedulableHabit[],
   lookup: Map<string, boolean>,
   todayStr: string
 ): { currentStreak: number; bestStreak: number } {

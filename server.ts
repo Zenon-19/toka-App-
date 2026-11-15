@@ -13,11 +13,14 @@ import {
   getUserByUid,
   getUserCompletions,
   getUserHabits,
+  getUserSettings,
   updateHabit,
   updateUserProfile,
   updateUserSettings,
   upsertHabitCompletion,
 } from './src/db/queries.ts';
+import { getTodayInTimezone } from './src/utils/date.ts';
+import { attachHabitStreaks } from './src/utils/habitLogic.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,10 +52,13 @@ app.get('/api/workspace', requireAuth, async (req: AuthRequest, res) => {
       getUserCompletions(user.id),
     ]);
 
+    const todayStr = getTodayInTimezone(settings.timezone || timezone);
+    const enrichedHabits = attachHabitStreaks(habitsList, completionsList, todayStr);
+
     res.json({
       user,
       settings,
-      habits: habitsList,
+      habits: enrichedHabits,
       completions: completionsList,
     });
   } catch (error: unknown) {
@@ -196,7 +202,11 @@ app.post('/api/habits', requireAuth, async (req: AuthRequest, res) => {
           : new Date().toISOString().slice(0, 10),
     });
 
-    res.status(201).json(created);
+    const settings = await getUserSettings(user.id);
+    const todayStr = getTodayInTimezone(settings?.timezone || 'UTC');
+    const [enriched] = attachHabitStreaks([created], [], todayStr);
+
+    res.status(201).json(enriched);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to create habit.';
     res.status(500).json({ error: message });
@@ -237,7 +247,9 @@ app.post('/api/habits/batch', requireAuth, async (req: AuthRequest, res) => {
       .filter((item: { title: string }) => item.title.length > 0);
 
     const created = await createHabitsBatch(user.id, sanitized);
-    res.status(201).json(created);
+    const settings = await getUserSettings(user.id);
+    const todayStr = getTodayInTimezone(settings?.timezone || 'UTC');
+    res.status(201).json(attachHabitStreaks(created, [], todayStr));
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to create habits.';
     res.status(500).json({ error: message });
@@ -293,7 +305,13 @@ app.patch('/api/habits/:id', requireAuth, async (req: AuthRequest, res) => {
       res.status(404).json({ error: 'Habit not found.' });
       return;
     }
-    res.json(updated);
+    const [settings, completionsList] = await Promise.all([
+      getUserSettings(user.id),
+      getUserCompletions(user.id),
+    ]);
+    const todayStr = getTodayInTimezone(settings?.timezone || 'UTC');
+    const [enriched] = attachHabitStreaks([updated], completionsList, todayStr);
+    res.json(enriched);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to update habit.';
     res.status(500).json({ error: message });

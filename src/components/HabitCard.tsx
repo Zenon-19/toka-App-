@@ -1,11 +1,11 @@
-import { Check, ChevronRight } from 'lucide-react';
+import { Check, ChevronRight, Flame } from 'lucide-react';
 import type { Habit } from '../types/index.ts';
 import { HabitIcon } from './HabitIcon.tsx';
 
 interface HabitCardProps {
   habit: Habit;
   completed: boolean;
-  streak: number;
+  streak?: number;
   onToggle: () => void;
   onSelect: () => void;
 }
@@ -17,6 +17,11 @@ export function HabitCard({
   onToggle,
   onSelect,
 }: HabitCardProps) {
+  const currentStreak = streak ?? habit.streak ?? 0;
+  const hasActiveStreak = currentStreak > 0;
+  const isPersonalBest =
+    hasActiveStreak && typeof habit.bestStreak === 'number' && currentStreak >= habit.bestStreak;
+
   return (
     <div
       onClick={onSelect}
@@ -30,7 +35,7 @@ export function HabitCard({
       }}
       className={`group flex items-center gap-3.5 p-4 rounded-2xl border transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69] ${
         completed
-          ? 'bg-[var(--toka-bg-secondary)] border-[var(--toka-border)] opacity-85'
+          ? 'bg-[var(--toka-bg-secondary)] border-[var(--toka-border)] opacity-90'
           : 'bg-[var(--toka-bg-card)] border-[var(--toka-border)] hover:border-[#929B93]/50'
       }`}
     >
@@ -64,21 +69,48 @@ export function HabitCard({
               <span className="font-mono-num">{habit.reminderTime}</span>
             </>
           ) : null}
-          {streak > 0 ? (
-            <>
-              <span aria-hidden="true">·</span>
-              <span className="font-mono-num text-[var(--toka-accent-text)]">
-                {streak}d streak
-              </span>
-            </>
-          ) : null}
         </div>
       </div>
 
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center gap-2.5 shrink-0">
+        <div
+          className="flex flex-col items-end justify-center min-w-[44px]"
+          title={
+            habit.bestStreak && habit.bestStreak > currentStreak
+              ? `${currentStreak} day streak · Best ${habit.bestStreak}d`
+              : isPersonalBest && currentStreak >= 2
+              ? `${currentStreak} day streak · Personal best`
+              : `${currentStreak} day streak`
+          }
+          aria-label={`${currentStreak} day current streak`}
+        >
+          <div
+            className={`inline-flex items-center gap-1 font-mono-num text-sm font-semibold leading-none transition-colors duration-200 ${
+              hasActiveStreak
+                ? 'text-[var(--toka-accent-text)]'
+                : 'text-[var(--toka-text-secondary)]'
+            }`}
+          >
+            <Flame
+              size={14}
+              className={
+                hasActiveStreak
+                  ? 'text-[var(--toka-accent-text)] fill-current opacity-90'
+                  : 'text-[var(--toka-text-secondary)] opacity-55'
+              }
+              aria-hidden="true"
+            />
+            <span>{currentStreak}d</span>
+          </div>
+          <span className="mt-1 text-[10px] font-medium text-[var(--toka-text-secondary)] leading-none">
+            streak
+          </span>
+        </div>
+
         <ChevronRight
           size={16}
-          className="text-[var(--toka-text-secondary)] opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block mr-1"
+          className="text-[var(--toka-text-secondary)] opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block"
+          aria-hidden="true"
         />
         <button
           type="button"

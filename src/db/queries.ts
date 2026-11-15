@@ -80,6 +80,19 @@ export async function getUserByUid(uid: string) {
   }
 }
 
+export async function getUserSettings(userId: string) {
+  try {
+    const [settings] = await db
+      .select()
+      .from(userSettings)
+      .where(eq(userSettings.userId, userId));
+    return settings || null;
+  } catch (error) {
+    console.error('Database error in getUserSettings:', error);
+    throw new Error('Failed to retrieve user settings.', { cause: error });
+  }
+}
+
 export async function updateUserProfile(
   userId: string,
   updates: { name?: string; avatarUrl?: string | null }

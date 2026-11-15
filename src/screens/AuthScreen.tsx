@@ -116,6 +116,19 @@ export function AuthScreen() {
             Consistency over perfection. Your personal habit history is isolated to your
             authenticated account and can be exported or deleted anytime.
           </p>
+
+          {(authError || (typeof window !== 'undefined' && window.self !== window.top)) ? (
+            <div className="mt-4 pt-4 border-t border-[#303730]">
+              <a
+                href={typeof window !== 'undefined' ? window.location.href : '/'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-[#C6FF69] hover:underline"
+              >
+                Opening in a restricted browser or preview? Open TOKA in a full tab
+              </a>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

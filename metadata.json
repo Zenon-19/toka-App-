@@ -2,5 +2,7 @@
   "name": "TOKA",
   "description": "Consistency over perfection. Build habits, become consistent, and transform yourself.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

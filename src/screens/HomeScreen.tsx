@@ -24,7 +24,6 @@ export function HomeScreen() {
     overallStreaks,
     weeklySeries,
     completionLookup,
-    habitStatsMap,
     activeHabits,
   } = useHabitData();
 
@@ -243,13 +242,12 @@ export function HomeScreen() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {selectedDayHabits.map((habit) => {
               const completed = isHabitCompletedOnDate(completionLookup, habit.id, selectedDate);
-              const stats = habitStatsMap.get(habit.id);
               return (
                 <HabitCard
                   key={habit.id}
                   habit={habit}
                   completed={completed}
-                  streak={stats?.currentStreak ?? 0}
+                  streak={habit.streak}
                   onToggle={() => toggleCompletion(habit.id, selectedDate)}
                   onSelect={() => navigateToScreen('habit-details', habit.id)}
                 />

@@ -3,6 +3,7 @@ import { useTokaStore } from '../store/useTokaStore.ts';
 import type { Habit, HabitStats } from '../types/index.ts';
 import { addDays, getTodayInTimezone } from '../utils/date.ts';
 import {
+  attachHabitStreaks,
   buildCompletionLookup,
   calculateHabitStats,
   calculateOverallStreaks,
@@ -11,7 +12,7 @@ import {
 } from '../utils/habitLogic.ts';
 
 export function useHabitData() {
-  const habits = useTokaStore((s) => s.habits);
+  const rawHabits = useTokaStore((s) => s.habits);
   const completions = useTokaStore((s) => s.completions);
   const settings = useTokaStore((s) => s.settings);
   const selectedDate = useTokaStore((s) => s.selectedDate);
@@ -20,6 +21,11 @@ export function useHabitData() {
   const todayStr = useMemo(() => getTodayInTimezone(timezone), [timezone]);
 
   const completionLookup = useMemo(() => buildCompletionLookup(completions), [completions]);
+
+  const habits = useMemo(
+    () => attachHabitStreaks(rawHabits, completions, todayStr),
+    [rawHabits, completions, todayStr]
+  );
 
   const activeHabits = useMemo(() => habits.filter((h) => h.status === 'active'), [habits]);
   const archivedHabits = useMemo(() => habits.filter((h) => h.status === 'archived'), [habits]);
@@ -88,6 +94,60 @@ export function useHabitData() {
     return days;
   }, [habits, completionLookup, todayStr]);
 
+  // Last 8 weeks aggregated completion rate for consistency over time chart
+  const weeklyConsistencySeries = useMemo(() => {
+    const weeks: {
+      weekKey: string;
+      label: string;
+      rangeLabel: string;
+      completedCount: number;
+      scheduledCount: number;
+      percentage: number;
+    }[] = [];
+
+    for (let w = 7; w >= 0; w--) {
+      const endOffset = -(w * 7);
+      const startOffset = endOffset - 6;
+      const startStr = addDays(todayStr, startOffset);
+      const endStr = addDays(todayStr, endOffset);
+
+      let completedCount = 0;
+      let scheduledCount = 0;
+
+      for (let d = startOffset; d <= endOffset; d++) {
+        const dateStr = addDays(todayStr, d);
+        const summary = getDailySummary(habits, completionLookup, dateStr);
+        completedCount += summary.completedCount;
+        scheduledCount += summary.scheduledCount;
+      }
+
+      const percentage =
+        scheduledCount > 0 ? Math.round((completedCount / scheduledCount) * 100) : 0;
+
+      const startDt = new Date(`${startStr}T00:00:00Z`);
+      const endDt = new Date(`${endStr}T00:00:00Z`);
+      const fmt = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'UTC',
+        month: 'short',
+        day: 'numeric',
+      });
+
+      const label = w === 0 ? 'This wk' : fmt.format(startDt);
+      const rangeLabel = `${fmt.format(startDt)} – ${fmt.format(endDt)}`;
+
+      weeks.push({
+        weekKey: startStr,
+        label,
+        rangeLabel,
+        completedCount,
+        scheduledCount,
+        percentage,
+      });
+    }
+
+    return weeks;
+  }, [habits, completionLookup, todayStr]);
+
   // Last 30 days series for monthly trend chart
   const monthlySeries = useMemo(() => {
     const days: {
@@ -148,6 +208,7 @@ export function useHabitData() {
     overallStreaks,
     totalCompletedCount,
     weeklySeries,
+    weeklyConsistencySeries,
     monthlySeries,
     heatmapDays,
     getHabitById,

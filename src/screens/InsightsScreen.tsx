@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Calendar, Flame, TrendingUp } from 'lucide-react';
 import { HabitIcon } from '../components/HabitIcon.tsx';
+import {
+  Last7DaysRechartsBar,
+  WeeklyConsistencyOverTimeChart,
+} from '../components/WeeklyConsistencyChart.tsx';
 import { useHabitData } from '../hooks/useHabitData.ts';
 import { useTokaStore } from '../store/useTokaStore.ts';
 import { formatShortDate } from '../utils/date.ts';
@@ -15,6 +19,7 @@ export function InsightsScreen() {
     overallStreaks,
     totalCompletedCount,
     weeklySeries,
+    weeklyConsistencySeries,
     monthlySeries,
     heatmapDays,
   } = useHabitData();
@@ -41,6 +46,13 @@ export function InsightsScreen() {
     const sum = activeDays.reduce((acc, d) => acc + d.percentage, 0);
     return Math.round(sum / activeDays.length);
   }, [weeklySeries]);
+
+  const eightWeekAverage = useMemo(() => {
+    const activeWeeks = weeklyConsistencySeries.filter((w) => w.scheduledCount > 0);
+    if (activeWeeks.length === 0) return 0;
+    const sum = activeWeeks.reduce((acc, w) => acc + w.percentage, 0);
+    return Math.round(sum / activeWeeks.length);
+  }, [weeklyConsistencySeries]);
 
   const monthlyAverage = useMemo(() => {
     const activeDays = monthlySeries.filter((d) => d.scheduledCount > 0);
@@ -124,14 +136,35 @@ export function InsightsScreen() {
         </div>
       </div>
 
-      {/* Charts Row: Weekly Bar Chart + Monthly 30-day Trend */}
+      {/* Recharts Weekly Consistency Over Time + Last 7 Days Bar Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Weekly Completion Chart */}
         <div className="rounded-2xl bg-[var(--toka-bg-card)] border border-[var(--toka-border)] p-5 sm:p-6">
-          <div className="flex items-baseline justify-between mb-5">
+          <div className="flex items-baseline justify-between mb-4">
             <div>
               <h2 className="text-base font-semibold text-[var(--toka-text-primary)]">
-                Weekly completion
+                Weekly completion rate
+              </h2>
+              <p className="text-xs text-[var(--toka-text-secondary)] mt-0.5">
+                8-week habit consistency trajectory
+              </p>
+            </div>
+            <span className="font-mono-num text-sm font-semibold text-[var(--toka-accent-text)] inline-flex items-center gap-1">
+              <TrendingUp size={14} />
+              {eightWeekAverage}% avg
+            </span>
+          </div>
+
+          <WeeklyConsistencyOverTimeChart
+            data={weeklyConsistencySeries}
+            averageRate={eightWeekAverage}
+          />
+        </div>
+
+        <div className="rounded-2xl bg-[var(--toka-bg-card)] border border-[var(--toka-border)] p-5 sm:p-6">
+          <div className="flex items-baseline justify-between mb-4">
+            <div>
+              <h2 className="text-base font-semibold text-[var(--toka-text-primary)]">
+                This week&apos;s daily breakdown
               </h2>
               <p className="text-xs text-[var(--toka-text-secondary)] mt-0.5">
                 Last 7 days scheduled completion rate
@@ -142,31 +175,12 @@ export function InsightsScreen() {
             </span>
           </div>
 
-          <div className="h-44 flex items-end gap-2.5 pt-4">
-            {weeklySeries.map((day) => (
-              <div key={day.date} className="flex-1 flex flex-col items-center gap-2 h-full">
-                <div className="text-[11px] font-mono-num text-[var(--toka-text-secondary)]">
-                  {day.percentage}%
-                </div>
-                <div className="w-full flex-1 rounded-xl bg-[var(--toka-bg-secondary)] border border-[var(--toka-border)] flex items-end overflow-hidden p-1">
-                  <div
-                    className="w-full rounded-lg bg-[#C6FF69] transition-all duration-300"
-                    style={{
-                      height: `${Math.max(day.percentage, day.completedCount > 0 ? 8 : 0)}%`,
-                    }}
-                    title={`${day.date}: ${day.completedCount}/${day.scheduledCount} (${day.percentage}%)`}
-                  />
-                </div>
-                <div className="text-xs font-medium text-[var(--toka-text-secondary)]">
-                  {day.label}
-                </div>
-              </div>
-            ))}
-          </div>
+          <Last7DaysRechartsBar data={weeklySeries} />
         </div>
+      </div>
 
-        {/* Monthly 30-day Completion Chart */}
-        <div className="rounded-2xl bg-[var(--toka-bg-card)] border border-[var(--toka-border)] p-5 sm:p-6">
+      {/* Monthly 30-day Completion Chart */}
+      <div className="rounded-2xl bg-[var(--toka-bg-card)] border border-[var(--toka-border)] p-5 sm:p-6">
           <div className="flex items-baseline justify-between mb-5">
             <div>
               <h2 className="text-base font-semibold text-[var(--toka-text-primary)]">
@@ -206,7 +220,6 @@ export function InsightsScreen() {
             <span>{formatShortDate(monthlySeries[0]?.date || '')}</span>
             <span>{formatShortDate(monthlySeries[monthlySeries.length - 1]?.date || '')}</span>
           </div>
-        </div>
       </div>
 
       {/* 12-Week Calendar Heatmap */}

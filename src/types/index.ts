@@ -44,6 +44,8 @@ export interface Habit {
   startDate: string; // YYYY-MM-DD
   status: HabitStatus;
   createdAt: string;
+  streak: number;
+  bestStreak?: number;
 }
 
 export interface HabitCompletion {
