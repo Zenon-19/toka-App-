@@ -163,25 +163,25 @@ export function HabitDetailsScreen() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="rounded-2xl bg-[var(--toka-bg-card)] border border-[var(--toka-border)] p-4 sm:p-5">
           <div className="text-xs text-[var(--toka-text-secondary)]">Current streak</div>
-          <div className="mt-1.5 font-mono-num text-2xl font-semibold text-[var(--toka-accent-text)]">
+          <div className="mt-1.5 tabular-nums text-2xl font-semibold text-[var(--toka-accent-text)]">
             {stats?.currentStreak ?? 0}d
           </div>
         </div>
         <div className="rounded-2xl bg-[var(--toka-bg-card)] border border-[var(--toka-border)] p-4 sm:p-5">
           <div className="text-xs text-[var(--toka-text-secondary)]">Best streak</div>
-          <div className="mt-1.5 font-mono-num text-2xl font-semibold text-[var(--toka-text-primary)]">
+          <div className="mt-1.5 tabular-nums text-2xl font-semibold text-[var(--toka-text-primary)]">
             {stats?.bestStreak ?? 0}d
           </div>
         </div>
         <div className="rounded-2xl bg-[var(--toka-bg-card)] border border-[var(--toka-border)] p-4 sm:p-5">
           <div className="text-xs text-[var(--toka-text-secondary)]">Total completions</div>
-          <div className="mt-1.5 font-mono-num text-2xl font-semibold text-[var(--toka-text-primary)]">
+          <div className="mt-1.5 tabular-nums text-2xl font-semibold text-[var(--toka-text-primary)]">
             {stats?.totalCompletions ?? 0}
           </div>
         </div>
         <div className="rounded-2xl bg-[var(--toka-bg-card)] border border-[var(--toka-border)] p-4 sm:p-5">
           <div className="text-xs text-[var(--toka-text-secondary)]">Completion rate</div>
-          <div className="mt-1.5 font-mono-num text-2xl font-semibold text-[var(--toka-text-primary)]">
+          <div className="mt-1.5 tabular-nums text-2xl font-semibold text-[var(--toka-text-primary)]">
             {stats?.completionRate ?? 0}%
           </div>
         </div>
@@ -241,7 +241,7 @@ export function HabitDetailsScreen() {
               <h3 className="text-sm font-semibold text-[var(--toka-text-primary)]">
                 Recent completions
               </h3>
-              <span className="font-mono-num text-xs text-[var(--toka-text-secondary)]">
+              <span className="tabular-nums text-xs text-[var(--toka-text-secondary)]">
                 {habitCompletions.length} total
               </span>
             </div>
@@ -256,7 +256,7 @@ export function HabitDetailsScreen() {
                     key={entry.id}
                     className="py-2.5 flex items-center justify-between text-xs"
                   >
-                    <span className="font-mono-num text-[var(--toka-text-primary)]">
+                    <span className="tabular-nums text-[var(--toka-text-primary)]">
                       {formatShortDate(entry.completionDate)}
                     </span>
                     <span className="text-[var(--toka-accent-text)] font-medium">Completed</span>

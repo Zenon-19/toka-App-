@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
 import { useTokaStore } from '../store/useTokaStore.ts';
 import type { Habit, HabitStats } from '../types/index.ts';
-import { addDays, getTodayInTimezone } from '../utils/date.ts';
+import { addDays, getTodayInTimezone, normalizeTimezone } from '../utils/date.ts';
 import {
   attachHabitStreaks,
   buildCompletionLookup,
   calculateHabitStats,
   calculateOverallStreaks,
+  getBestDayOfWeek,
   getDailySummary,
   isHabitScheduledOnDate,
 } from '../utils/habitLogic.ts';
@@ -17,7 +18,7 @@ export function useHabitData() {
   const settings = useTokaStore((s) => s.settings);
   const selectedDate = useTokaStore((s) => s.selectedDate);
 
-  const timezone = settings?.timezone || 'UTC';
+  const timezone = normalizeTimezone(settings?.timezone || 'UTC');
   const todayStr = useMemo(() => getTodayInTimezone(timezone), [timezone]);
 
   const completionLookup = useMemo(() => buildCompletionLookup(completions), [completions]);
@@ -55,6 +56,11 @@ export function useHabitData() {
 
   const overallStreaks = useMemo(
     () => calculateOverallStreaks(habits, completionLookup, todayStr),
+    [habits, completionLookup, todayStr]
+  );
+
+  const bestDayOfWeek = useMemo(
+    () => getBestDayOfWeek(habits, completionLookup, todayStr),
     [habits, completionLookup, todayStr]
   );
 
@@ -152,15 +158,23 @@ export function useHabitData() {
   const monthlySeries = useMemo(() => {
     const days: {
       date: string;
+      label: string;
       completedCount: number;
       scheduledCount: number;
       percentage: number;
     }[] = [];
+    const fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'UTC',
+      month: 'short',
+      day: 'numeric',
+    });
     for (let offset = -29; offset <= 0; offset++) {
       const dateStr = addDays(todayStr, offset);
       const summary = getDailySummary(habits, completionLookup, dateStr);
+      const dt = new Date(`${dateStr}T00:00:00Z`);
       days.push({
         date: dateStr,
+        label: fmt.format(dt),
         completedCount: summary.completedCount,
         scheduledCount: summary.scheduledCount,
         percentage: summary.percentage,
@@ -206,6 +220,7 @@ export function useHabitData() {
     todayStr,
     timezone,
     overallStreaks,
+    bestDayOfWeek,
     totalCompletedCount,
     weeklySeries,
     weeklyConsistencySeries,

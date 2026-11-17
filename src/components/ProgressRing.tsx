@@ -52,11 +52,11 @@ export function ProgressRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="font-mono-num text-2xl font-semibold tracking-tight text-[var(--toka-text-primary)]">
+        <span className="tabular-nums text-2xl font-semibold tracking-tight text-[var(--toka-text-primary)]">
           {label ?? `${clamped}%`}
         </span>
         {sublabel ? (
-          <span className="text-[11px] text-[var(--toka-text-secondary)] mt-0.5">
+          <span className="text-xs text-[var(--toka-text-secondary)] mt-0.5">
             {sublabel}
           </span>
         ) : null}

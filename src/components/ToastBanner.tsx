@@ -41,9 +41,9 @@ export function ToastBanner() {
           type="button"
           onClick={clearToast}
           aria-label="Dismiss notification"
-          className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-[var(--toka-text-secondary)] hover:text-[var(--toka-text-primary)]"
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-[var(--toka-text-secondary)] hover:text-[var(--toka-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69]"
         >
-          <X size={15} />
+          <X size={16} />
         </button>
       </div>
     </div>

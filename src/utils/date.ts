@@ -1,6 +1,25 @@
+const LEGACY_TIMEZONE_ALIASES: Record<string, string> = {
+  'Asia/Calcutta': 'Asia/Kolkata',
+  'Asia/Katmandu': 'Asia/Kathmandu',
+  'Asia/Saigon': 'Asia/Ho_Chi_Minh',
+  'Asia/Rangoon': 'Asia/Yangon',
+  'Europe/Kiev': 'Europe/Kyiv',
+  'America/Buenos_Aires': 'America/Argentina/Buenos_Aires',
+  'US/Eastern': 'America/New_York',
+  'US/Central': 'America/Chicago',
+  'US/Mountain': 'America/Denver',
+  'US/Pacific': 'America/Los_Angeles',
+};
+
+export function normalizeTimezone(tz?: string | null): string {
+  if (!tz) return 'UTC';
+  return LEGACY_TIMEZONE_ALIASES[tz] || tz;
+}
+
 export function getBrowserTimezone(): string {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const raw = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    return normalizeTimezone(raw);
   } catch {
     return 'UTC';
   }

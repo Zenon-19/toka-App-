@@ -87,18 +87,24 @@ export const STARTER_HABIT_TEMPLATES: Omit<HabitInput, 'startDate'>[] = [
   },
 ];
 
-export const COMMON_TIMEZONES = [
-  'UTC',
-  'America/Los_Angeles',
-  'America/Denver',
-  'America/Chicago',
-  'America/New_York',
-  'Europe/London',
-  'Europe/Paris',
-  'Europe/Berlin',
-  'Asia/Dubai',
-  'Asia/Kolkata',
-  'Asia/Singapore',
-  'Asia/Tokyo',
-  'Australia/Sydney',
+export interface TimezoneOption {
+  id: string;
+  label: string;
+}
+
+export const COMMON_TIMEZONES: TimezoneOption[] = [
+  { id: 'UTC', label: 'UTC (Coordinated Universal Time, UTC+0:00)' },
+  { id: 'America/Los_Angeles', label: 'US Pacific — Los Angeles (PT, UTC-8:00)' },
+  { id: 'America/Denver', label: 'US Mountain — Denver (MT, UTC-7:00)' },
+  { id: 'America/Chicago', label: 'US Central — Chicago (CT, UTC-6:00)' },
+  { id: 'America/New_York', label: 'US Eastern — New York (ET, UTC-5:00)' },
+  { id: 'America/Sao_Paulo', label: 'Brazil — São Paulo (BRT, UTC-3:00)' },
+  { id: 'Europe/London', label: 'United Kingdom — London (GMT/BST, UTC+0:00)' },
+  { id: 'Europe/Paris', label: 'Central Europe — Paris (CET, UTC+1:00)' },
+  { id: 'Europe/Berlin', label: 'Central Europe — Berlin (CET, UTC+1:00)' },
+  { id: 'Asia/Dubai', label: 'Gulf — Dubai (GST, UTC+4:00)' },
+  { id: 'Asia/Kolkata', label: 'India (IST, UTC+5:30)' },
+  { id: 'Asia/Singapore', label: 'Singapore (SGT, UTC+8:00)' },
+  { id: 'Asia/Tokyo', label: 'Japan — Tokyo (JST, UTC+9:00)' },
+  { id: 'Australia/Sydney', label: 'Australia — Sydney (AEST, UTC+10:00)' },
 ];

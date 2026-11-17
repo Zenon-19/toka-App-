@@ -12,9 +12,7 @@ export type ThemePreference = 'dark' | 'light';
 
 export interface UserProfile {
   id: string;
-  uid: string;
   name: string;
-  email: string;
   avatarUrl: string | null;
   createdAt: string;
 }
@@ -82,6 +80,23 @@ export interface DailySummary {
   scheduledCount: number;
   completedCount: number;
   percentage: number;
+}
+
+export interface BestDaySummary {
+  dayIndex: number;
+  dayName: string;
+  completionRate: number;
+  completedCount: number;
+  scheduledCount: number;
+}
+
+export interface TokaExportPayload {
+  schemaVersion: number;
+  exportedAt: string;
+  profile: UserProfile;
+  settings: UserSettings;
+  habits: Habit[];
+  completions: HabitCompletion[];
 }
 
 export type MainTab = 'home' | 'habits' | 'insights' | 'profile';

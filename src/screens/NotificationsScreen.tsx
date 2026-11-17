@@ -76,18 +76,19 @@ export function NotificationsScreen() {
           <button
             type="button"
             role="switch"
+            aria-label="Enable notifications"
             aria-checked={settings?.notificationsEnabled ?? true}
             onClick={() =>
               updateSettings({
                 notificationsEnabled: !(settings?.notificationsEnabled ?? true),
               })
             }
-            className={`w-12 h-7 rounded-full transition-colors p-1 shrink-0 ${
+            className={`min-h-[44px] min-w-[52px] flex items-center rounded-full transition-colors px-1 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69] ${
               settings?.notificationsEnabled ? 'bg-[#C6FF69]' : 'bg-[var(--toka-border)]'
             }`}
           >
             <span
-              className={`block w-5 h-5 rounded-full bg-[#121512] transition-transform ${
+              className={`block w-6 h-6 rounded-full bg-[#121512] transition-transform ${
                 settings?.notificationsEnabled ? 'translate-x-5' : 'translate-x-0'
               }`}
             />
@@ -106,7 +107,7 @@ export function NotificationsScreen() {
               <button
                 type="button"
                 onClick={handleRequestPermission}
-                className="min-h-[40px] px-4 py-1.5 rounded-xl bg-[#C6FF69] text-[#121512] text-xs font-semibold"
+                className="min-h-[44px] px-4 py-2 rounded-xl bg-[#C6FF69] text-[#121512] text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69]"
               >
                 Allow System Alerts
               </button>
@@ -114,9 +115,9 @@ export function NotificationsScreen() {
             <button
               type="button"
               onClick={handleTestAlert}
-              className="min-h-[40px] px-4 py-1.5 rounded-xl border border-[var(--toka-border)] bg-[var(--toka-bg-secondary)] text-xs font-medium text-[var(--toka-text-primary)] hover:border-[#C6FF69] inline-flex items-center gap-1.5"
+              className="min-h-[44px] px-4 py-2 rounded-xl border border-[var(--toka-border)] bg-[var(--toka-bg-secondary)] text-xs font-medium text-[var(--toka-text-primary)] hover:border-[#929B93] inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69]"
             >
-              <Bell size={14} />
+              <Bell size={14} aria-hidden="true" />
               <span>Send Test Alert</span>
             </button>
           </div>
@@ -137,6 +138,7 @@ export function NotificationsScreen() {
           <button
             type="button"
             role="switch"
+            aria-label="Toggle daily summary check-in"
             disabled={!settings?.notificationsEnabled}
             aria-checked={settings?.dailyReminderEnabled ?? true}
             onClick={() =>
@@ -144,12 +146,12 @@ export function NotificationsScreen() {
                 dailyReminderEnabled: !(settings?.dailyReminderEnabled ?? true),
               })
             }
-            className={`w-12 h-7 rounded-full transition-colors p-1 shrink-0 disabled:opacity-40 ${
+            className={`min-h-[44px] min-w-[52px] flex items-center rounded-full transition-colors px-1 shrink-0 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69] ${
               settings?.dailyReminderEnabled ? 'bg-[#C6FF69]' : 'bg-[var(--toka-border)]'
             }`}
           >
             <span
-              className={`block w-5 h-5 rounded-full bg-[#121512] transition-transform ${
+              className={`block w-6 h-6 rounded-full bg-[#121512] transition-transform ${
                 settings?.dailyReminderEnabled ? 'translate-x-5' : 'translate-x-0'
               }`}
             />
@@ -169,7 +171,7 @@ export function NotificationsScreen() {
             disabled={!settings?.notificationsEnabled || !settings?.dailyReminderEnabled}
             value={settings?.dailyReminderTime || '08:30'}
             onChange={(e) => updateSettings({ dailyReminderTime: e.target.value })}
-            className="min-h-[42px] px-3.5 py-1.5 rounded-xl bg-[var(--toka-bg-secondary)] border border-[var(--toka-border)] text-sm font-mono-num text-[var(--toka-text-primary)] focus:outline-none focus:border-[#C6FF69] disabled:opacity-40"
+            className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[var(--toka-bg-secondary)] border border-[var(--toka-border)] text-sm tabular-nums text-[var(--toka-text-primary)] focus:outline-none focus:border-[#C6FF69] disabled:opacity-40"
           />
         </div>
       </div>
@@ -185,7 +187,7 @@ export function NotificationsScreen() {
               Archived habits never trigger notifications.
             </p>
           </div>
-          <span className="font-mono-num text-xs text-[var(--toka-text-secondary)]">
+          <span className="tabular-nums text-xs text-[var(--toka-text-secondary)]">
             {activeReminders.length} scheduled
           </span>
         </div>
@@ -201,7 +203,7 @@ export function NotificationsScreen() {
                 key={habit.id}
                 type="button"
                 onClick={() => navigateToScreen('edit-habit', habit.id)}
-                className="w-full py-3 flex items-center justify-between gap-3 text-left hover:bg-[var(--toka-bg-secondary)]/50 px-2 -mx-2 rounded-xl transition-colors"
+                className="w-full min-h-[44px] py-3 flex items-center justify-between gap-3 text-left hover:bg-[var(--toka-bg-secondary)]/50 px-2 -mx-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69]"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-9 h-9 rounded-xl bg-[var(--toka-bg-secondary)] flex items-center justify-center shrink-0 text-[var(--toka-text-primary)]">
@@ -216,7 +218,7 @@ export function NotificationsScreen() {
                     </div>
                   </div>
                 </div>
-                <span className="inline-flex items-center gap-1.5 font-mono-num text-xs font-medium text-[var(--toka-accent-text)] shrink-0">
+                <span className="inline-flex items-center gap-1.5 tabular-nums text-xs font-medium text-[var(--toka-accent-text)] shrink-0">
                   <Clock size={13} />
                   {habit.reminderTime}
                 </span>

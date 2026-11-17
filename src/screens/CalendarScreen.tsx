@@ -81,7 +81,7 @@ export function CalendarScreen() {
               <h2 className="text-base font-semibold text-[var(--toka-text-primary)]">
                 {formatReadableDate(inspectDate)}
               </h2>
-              <p className="text-xs text-[var(--toka-text-secondary)] mt-0.5 font-mono-num">
+              <p className="text-xs text-[var(--toka-text-secondary)] mt-0.5 tabular-nums">
                 {inspectSummary.completedCount} / {inspectSummary.scheduledCount} completed (
                 {inspectSummary.percentage}%)
               </p>
@@ -94,7 +94,7 @@ export function CalendarScreen() {
                   setCalYear(todayYear);
                   setCalMonthIdx((todayMonth || 1) - 1);
                 }}
-                className="min-h-[36px] px-3 rounded-lg text-xs font-medium bg-[var(--toka-bg-secondary)] border border-[var(--toka-border)] text-[var(--toka-accent-text)]"
+                className="min-h-[44px] px-3.5 rounded-xl text-xs font-medium bg-[var(--toka-bg-secondary)] border border-[var(--toka-border)] text-[var(--toka-text-primary)] hover:border-[#929B93] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69]"
               >
                 Today
               </button>
@@ -121,7 +121,7 @@ export function CalendarScreen() {
                     <button
                       type="button"
                       onClick={() => navigateToScreen('habit-details', habit.id)}
-                      className="flex items-center gap-3 min-w-0 text-left flex-1"
+                      className="min-h-[44px] flex items-center gap-3 min-w-0 text-left flex-1 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69]"
                     >
                       <div className="w-9 h-9 rounded-xl bg-[var(--toka-bg-secondary)] flex items-center justify-center shrink-0 text-[var(--toka-text-primary)]">
                         <HabitIcon name={habit.icon} size={17} />
@@ -140,13 +140,14 @@ export function CalendarScreen() {
                       type="button"
                       onClick={() => toggleCompletion(habit.id, inspectDate)}
                       aria-label={`Toggle ${habit.title} on ${inspectDate}`}
-                      className={`min-h-[40px] min-w-[40px] rounded-xl flex items-center justify-center transition-colors ${
+                      aria-pressed={done}
+                      className={`w-11 h-11 min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center transition-all active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69] ${
                         done
-                          ? 'bg-[#C6FF69] text-[#121512]'
-                          : 'bg-[var(--toka-bg-secondary)] border border-[var(--toka-border)] text-transparent hover:border-[#C6FF69]'
+                          ? 'bg-[#C6FF69] border-2 border-[#C6FF69] text-[#121512] toka-check-pop'
+                          : 'bg-transparent border-2 border-[#586359] dark:border-[#768077] text-transparent hover:border-[#C6FF69]'
                       }`}
                     >
-                      <Check size={16} strokeWidth={2.75} />
+                      <Check size={18} strokeWidth={3} />
                     </button>
                   </div>
                 );

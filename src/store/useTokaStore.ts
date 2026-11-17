@@ -1,9 +1,19 @@
 import { create } from 'zustand';
-import { deleteUser, signOut } from 'firebase/auth';
-import type { User as FirebaseUser } from 'firebase/auth';
-import { auth } from '../lib/firebase.ts';
-import { signInWithGoogleResilient } from '../lib/googleAuth.ts';
-import { setInMemoryToken, tokaApi } from '../services/api.ts';
+import {
+  TOKA_SCHEMA_VERSION,
+  buildExportCsv,
+  buildExportJson,
+  deleteLocalHabit,
+  importWorkspaceJson,
+  insertLocalHabit,
+  insertLocalHabitsBatch,
+  loadLocalWorkspace,
+  resetAllLocalData,
+  saveLocalProfile,
+  saveLocalSettings,
+  updateLocalHabit,
+  upsertLocalCompletion,
+} from '../services/localDb.ts';
 import type {
   AppScreen,
   Habit,
@@ -13,7 +23,7 @@ import type {
   UserProfile,
   UserSettings,
 } from '../types/index.ts';
-import { getBrowserTimezone, getTodayInTimezone } from '../utils/date.ts';
+import { getBrowserTimezone, getTodayInTimezone, normalizeTimezone } from '../utils/date.ts';
 import { attachHabitStreaks } from '../utils/habitLogic.ts';
 
 export interface ToastMessage {
@@ -23,13 +33,10 @@ export interface ToastMessage {
 }
 
 interface TokaState {
-  // Auth
-  firebaseUser: FirebaseUser | null;
-  authInitialized: boolean;
-  authLoading: boolean;
-  authError: string | null;
+  workspaceInitialized: boolean;
 
-  // Workspace data
+  // Workspace data (persisted in browser IndexedDB)
+  schemaVersion: number;
   profile: UserProfile | null;
   settings: UserSettings | null;
   habits: Habit[];
@@ -48,12 +55,7 @@ interface TokaState {
   toast: ToastMessage | null;
 
   // Actions
-  setFirebaseUser: (user: FirebaseUser | null) => void;
-  setAuthInitialized: (ready: boolean) => void;
-  signInWithGoogle: () => Promise<void>;
-  logout: () => Promise<void>;
   loadWorkspace: () => Promise<void>;
-
   navigateToTab: (tab: MainTab) => void;
   navigateToScreen: (screen: AppScreen, habitId?: string | null) => void;
   setSelectedDate: (dateStr: string) => void;
@@ -61,6 +63,11 @@ interface TokaState {
 
   showToast: (type: ToastMessage['type'], message: string) => void;
   clearToast: () => void;
+
+  completeOnboarding: (params: {
+    firstName: string;
+    firstHabit: HabitInput | null;
+  }) => Promise<boolean>;
 
   createHabit: (input: HabitInput) => Promise<Habit | null>;
   createStarterHabits: (items: HabitInput[]) => Promise<void>;
@@ -85,17 +92,25 @@ interface TokaState {
       >
     >
   ) => Promise<boolean>;
-  deleteAccount: () => Promise<boolean>;
+
+  exportDataJson: () => string;
+  exportDataCsv: () => string;
+  importDataJson: (rawJson: string) => Promise<boolean>;
+  resetAllData: () => Promise<boolean>;
 }
 
 let toastCounter = 0;
 
-export const useTokaStore = create<TokaState>((set, get) => ({
-  firebaseUser: null,
-  authInitialized: false,
-  authLoading: false,
-  authError: null,
+function applyThemeToDom(theme: 'dark' | 'light') {
+  if (typeof document !== 'undefined') {
+    document.documentElement.classList.toggle('dark', theme !== 'light');
+  }
+}
 
+export const useTokaStore = create<TokaState>((set, get) => ({
+  workspaceInitialized: false,
+
+  schemaVersion: TOKA_SCHEMA_VERSION,
   profile: null,
   settings: null,
   habits: [],
@@ -111,86 +126,33 @@ export const useTokaStore = create<TokaState>((set, get) => ({
 
   toast: null,
 
-  setFirebaseUser: (user) => {
-    set({ firebaseUser: user });
-    if (!user) {
-      setInMemoryToken(null);
-      set({
-        profile: null,
-        settings: null,
-        habits: [],
-        completions: [],
-        workspaceError: null,
-      });
-    }
-  },
-
-  setAuthInitialized: (ready) => set({ authInitialized: ready }),
-
-  signInWithGoogle: async () => {
-    set({ authLoading: true, authError: null });
-    try {
-      const result = await signInWithGoogleResilient();
-      const token = await result.user.getIdToken();
-      setInMemoryToken(token);
-      set({ firebaseUser: result.user, authLoading: false });
-      await get().loadWorkspace();
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to sign in with Google.';
-      set({ authError: message, authLoading: false });
-    }
-  },
-
-  logout: async () => {
-    try {
-      await signOut(auth);
-      setInMemoryToken(null);
-      set({
-        firebaseUser: null,
-        profile: null,
-        settings: null,
-        habits: [],
-        completions: [],
-        activeTab: 'home',
-        activeScreen: 'home',
-        selectedHabitId: null,
-      });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to sign out.';
-      get().showToast('error', message);
-    }
-  },
-
   loadWorkspace: async () => {
-    const user = get().firebaseUser || auth.currentUser;
-    if (!user) return;
     set({ workspaceLoading: true, workspaceError: null });
     try {
-      const token = await user.getIdToken();
-      setInMemoryToken(token);
       const tz = getBrowserTimezone();
-      const data = await tokaApi.fetchWorkspace(tz);
-      const todayInUserTz = getTodayInTimezone(data.settings.timezone || tz);
+      const ws = await loadLocalWorkspace(tz);
+      const todayInUserTz = getTodayInTimezone(ws.settings.timezone || tz);
 
-      // Apply theme class
-      if (typeof document !== 'undefined') {
-        document.documentElement.classList.toggle('dark', data.settings.theme !== 'light');
-      }
+      applyThemeToDom(ws.settings.theme);
 
       set({
-        profile: data.user,
-        settings: data.settings,
-        habits: attachHabitStreaks(data.habits, data.completions, todayInUserTz),
-        completions: data.completions,
+        schemaVersion: ws.schemaVersion,
+        profile: ws.profile,
+        settings: ws.settings,
+        habits: attachHabitStreaks(ws.habits, ws.completions, todayInUserTz),
+        completions: ws.completions,
         selectedDate: todayInUserTz,
         workspaceLoading: false,
-        activeScreen: data.settings.onboardingCompleted ? get().activeScreen : 'onboarding',
+        workspaceInitialized: true,
       });
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : 'Unable to connect to TOKA workspace.';
-      set({ workspaceError: message, workspaceLoading: false });
+        error instanceof Error ? error.message : 'Unable to load local TOKA storage.';
+      set({
+        workspaceError: message,
+        workspaceLoading: false,
+        workspaceInitialized: true,
+      });
     }
   },
 
@@ -226,14 +188,69 @@ export const useTokaStore = create<TokaState>((set, get) => ({
       if (get().toast?.id === id) {
         set({ toast: null });
       }
-    }, 3400);
+    }, 3600);
   },
 
   clearToast: () => set({ toast: null }),
 
+  completeOnboarding: async ({ firstName, firstHabit }) => {
+    try {
+      const currentProfile = get().profile || {
+        id: 'local-user',
+        name: '',
+        avatarUrl: null,
+        createdAt: new Date().toISOString(),
+      };
+      const currentSettings = get().settings;
+      const tz = currentSettings?.timezone || getBrowserTimezone();
+
+      const savedProfile = await saveLocalProfile({
+        ...currentProfile,
+        name: firstName.trim(),
+      });
+
+      let nextHabits = get().habits;
+      if (firstHabit && firstHabit.title.trim()) {
+        const created = await insertLocalHabit(firstHabit, tz);
+        const todayStr = getTodayInTimezone(tz);
+        nextHabits = attachHabitStreaks([...nextHabits, created], get().completions, todayStr);
+      }
+
+      const nextSettings: UserSettings = currentSettings
+        ? await saveLocalSettings({ ...currentSettings, onboardingCompleted: true })
+        : await saveLocalSettings({
+            id: 'local-settings',
+            userId: 'local-user',
+            theme: 'dark',
+            notificationsEnabled: true,
+            dailyReminderEnabled: true,
+            dailyReminderTime: '08:30',
+            timezone: tz,
+            onboardingCompleted: true,
+            createdAt: new Date().toISOString(),
+          });
+
+      set({
+        profile: savedProfile,
+        settings: nextSettings,
+        habits: nextHabits,
+        activeTab: 'home',
+        activeScreen: 'home',
+        showOnboardingPreview: false,
+      });
+
+      return true;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to finish onboarding.';
+      get().showToast('error', message);
+      return false;
+    }
+  },
+
   createHabit: async (input) => {
     try {
-      const created = await tokaApi.createHabit(input);
+      const tz = get().settings?.timezone || getBrowserTimezone();
+      const created = await insertLocalHabit(input, tz);
       set((state) => {
         const todayStr = getTodayInTimezone(state.settings?.timezone || getBrowserTimezone());
         return {
@@ -251,30 +268,40 @@ export const useTokaStore = create<TokaState>((set, get) => ({
 
   createStarterHabits: async (items) => {
     try {
-      const created = await tokaApi.createHabitsBatch(items);
-      const updatedSettings = await tokaApi.updateSettings({ onboardingCompleted: true });
+      const tz = get().settings?.timezone || getBrowserTimezone();
+      const created = await insertLocalHabitsBatch(items, tz);
+      const currentSettings = get().settings;
+      const updatedSettings = currentSettings
+        ? await saveLocalSettings({ ...currentSettings, onboardingCompleted: true })
+        : null;
       set((state) => {
-        const todayStr = getTodayInTimezone(updatedSettings.timezone || getBrowserTimezone());
+        const todayStr = getTodayInTimezone(
+          updatedSettings?.timezone || state.settings?.timezone || getBrowserTimezone()
+        );
         return {
           habits: attachHabitStreaks([...state.habits, ...created], state.completions, todayStr),
-          settings: updatedSettings,
+          ...(updatedSettings ? { settings: updatedSettings } : {}),
           activeTab: 'home',
           activeScreen: 'home',
           showOnboardingPreview: false,
         };
       });
       if (created.length > 0) {
-        get().showToast('success', `Added ${created.length} starter habits.`);
+        get().showToast('success', `Added ${created.length} habits.`);
       }
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to save onboarding.';
+      const message = error instanceof Error ? error.message : 'Failed to add habits.';
       get().showToast('error', message);
     }
   },
 
   updateHabit: async (habitId, updates) => {
     try {
-      const updated = await tokaApi.updateHabit(habitId, updates);
+      const updated = await updateLocalHabit(habitId, updates);
+      if (!updated) {
+        get().showToast('error', 'Habit not found.');
+        return null;
+      }
       set((state) => {
         const todayStr = getTodayInTimezone(state.settings?.timezone || getBrowserTimezone());
         const nextHabits = state.habits.map((h) => (h.id === habitId ? updated : h));
@@ -293,7 +320,7 @@ export const useTokaStore = create<TokaState>((set, get) => ({
 
   deleteHabit: async (habitId) => {
     try {
-      await tokaApi.deleteHabit(habitId);
+      await deleteLocalHabit(habitId);
       set((state) => ({
         habits: state.habits.filter((h) => h.id !== habitId),
         completions: state.completions.filter((c) => c.habitId !== habitId),
@@ -315,8 +342,10 @@ export const useTokaStore = create<TokaState>((set, get) => ({
       (c) => c.habitId === habitId && c.completionDate === dateStr
     );
     const nextCompleted = !(existing?.completed === true);
+    const prevHabit = prevHabits.find((h) => h.id === habitId);
+    const prevStreak = prevHabit?.streak ?? 0;
 
-    // Optimistic update (completions + recalculated habit streaks)
+    // Optimistic update
     const optimisticList: HabitCompletion[] = existing
       ? prevCompletions.map((c) =>
           c.habitId === habitId && c.completionDate === dateStr
@@ -328,20 +357,24 @@ export const useTokaStore = create<TokaState>((set, get) => ({
           {
             id: `temp-${habitId}-${dateStr}`,
             habitId,
-            userId: get().profile?.id || '',
+            userId: 'local-user',
             completionDate: dateStr,
             completed: nextCompleted,
             createdAt: new Date().toISOString(),
           },
         ];
 
+    const optimisticHabits = attachHabitStreaks(prevHabits, optimisticList, todayStr);
+    const nextHabit = optimisticHabits.find((h) => h.id === habitId);
+    const nextStreak = nextHabit?.streak ?? 0;
+
     set({
       completions: optimisticList,
-      habits: attachHabitStreaks(prevHabits, optimisticList, todayStr),
+      habits: optimisticHabits,
     });
 
     try {
-      const saved = await tokaApi.toggleCompletion(habitId, dateStr, nextCompleted);
+      const saved = await upsertLocalCompletion(habitId, dateStr, nextCompleted);
       set((state) => {
         const hasExisting = state.completions.some(
           (c) => c.habitId === habitId && c.completionDate === dateStr
@@ -357,22 +390,48 @@ export const useTokaStore = create<TokaState>((set, get) => ({
           habits: attachHabitStreaks(state.habits, syncedCompletions, currentToday),
         };
       });
+
+      // Milestone celebration at 7, 30, and 100 day streaks
+      if (nextCompleted && nextHabit && nextStreak > prevStreak) {
+        if (nextStreak === 7) {
+          get().showToast(
+            'success',
+            `7-day streak on "${nextHabit.title}" — one full week of consistency.`
+          );
+        } else if (nextStreak === 30) {
+          get().showToast(
+            'success',
+            `30-day streak on "${nextHabit.title}" — a full month of showing up.`
+          );
+        } else if (nextStreak === 100) {
+          get().showToast(
+            'success',
+            `100-day streak on "${nextHabit.title}" — extraordinary consistency.`
+          );
+        }
+      }
     } catch (error: unknown) {
-      // Rollback
       set({ completions: prevCompletions, habits: prevHabits });
-      const message = error instanceof Error ? error.message : 'Could not update completion.';
+      const message = error instanceof Error ? error.message : 'Could not save completion.';
       get().showToast('error', message);
     }
   },
 
   updateProfile: async (updates) => {
     try {
-      const updated = await tokaApi.updateProfile(updates);
-      set({ profile: updated });
+      const current = get().profile;
+      if (!current) return false;
+      const next: UserProfile = {
+        ...current,
+        ...(updates.name !== undefined ? { name: updates.name.trim() } : {}),
+        ...(updates.avatarUrl !== undefined ? { avatarUrl: updates.avatarUrl } : {}),
+      };
+      const saved = await saveLocalProfile(next);
+      set({ profile: saved });
       get().showToast('success', 'Profile saved.');
       return true;
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to update profile.';
+      const message = error instanceof Error ? error.message : 'Failed to save profile.';
       get().showToast('error', message);
       return false;
     }
@@ -380,54 +439,141 @@ export const useTokaStore = create<TokaState>((set, get) => ({
 
   updateSettings: async (updates) => {
     try {
-      const updated = await tokaApi.updateSettings(updates);
-      if (typeof document !== 'undefined') {
-        document.documentElement.classList.toggle('dark', updated.theme !== 'light');
-      }
+      const current = get().settings;
+      if (!current) return false;
+      const next: UserSettings = {
+        ...current,
+        ...updates,
+        timezone: normalizeTimezone(updates.timezone ?? current.timezone),
+      };
+      const saved = await saveLocalSettings(next);
+      applyThemeToDom(saved.theme);
+
       set((state) => {
-        const tz = updated.timezone || getBrowserTimezone();
+        const tz = saved.timezone || getBrowserTimezone();
         const todayStr = getTodayInTimezone(tz);
         return {
-          settings: updated,
+          settings: saved,
           habits: attachHabitStreaks(state.habits, state.completions, todayStr),
           ...(updates.timezone ? { selectedDate: todayStr } : {}),
         };
       });
+
       if (updates.onboardingCompleted === undefined) {
-        get().showToast('success', 'Preferences updated.');
+        get().showToast('success', 'Preferences saved.');
       }
       return true;
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to update settings.';
+      const message = error instanceof Error ? error.message : 'Failed to save preferences.';
       get().showToast('error', message);
       return false;
     }
   },
 
-  deleteAccount: async () => {
+  exportDataJson: () => {
+    const state = get();
+    return buildExportJson({
+      schemaVersion: state.schemaVersion,
+      profile: state.profile || {
+        id: 'local-user',
+        name: '',
+        avatarUrl: null,
+        createdAt: new Date().toISOString(),
+      },
+      settings: state.settings || {
+        id: 'local-settings',
+        userId: 'local-user',
+        theme: 'dark',
+        notificationsEnabled: true,
+        dailyReminderEnabled: true,
+        dailyReminderTime: '08:30',
+        timezone: getBrowserTimezone(),
+        onboardingCompleted: true,
+        createdAt: new Date().toISOString(),
+      },
+      habits: state.habits,
+      completions: state.completions,
+    });
+  },
+
+  exportDataCsv: () => {
+    const state = get();
+    return buildExportCsv({
+      schemaVersion: state.schemaVersion,
+      profile: state.profile || {
+        id: 'local-user',
+        name: '',
+        avatarUrl: null,
+        createdAt: new Date().toISOString(),
+      },
+      settings: state.settings || {
+        id: 'local-settings',
+        userId: 'local-user',
+        theme: 'dark',
+        notificationsEnabled: true,
+        dailyReminderEnabled: true,
+        dailyReminderTime: '08:30',
+        timezone: getBrowserTimezone(),
+        onboardingCompleted: true,
+        createdAt: new Date().toISOString(),
+      },
+      habits: state.habits,
+      completions: state.completions,
+    });
+  },
+
+  importDataJson: async (rawJson) => {
     try {
-      await tokaApi.deleteAccount();
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        try {
-          await deleteUser(currentUser);
-        } catch {
-          await signOut(auth);
-        }
-      }
-      setInMemoryToken(null);
+      const ws = await importWorkspaceJson(rawJson);
+      const todayInUserTz = getTodayInTimezone(ws.settings.timezone);
+      applyThemeToDom(ws.settings.theme);
+
       set({
-        firebaseUser: null,
-        profile: null,
-        settings: null,
-        habits: [],
-        completions: [],
-        activeTab: 'home',
-        activeScreen: 'home',
+        schemaVersion: ws.schemaVersion,
+        profile: ws.profile,
+        settings: ws.settings,
+        habits: attachHabitStreaks(ws.habits, ws.completions, todayInUserTz),
+        completions: ws.completions,
+        selectedDate: todayInUserTz,
+        showOnboardingPreview: false,
       });
+
+      get().showToast(
+        'success',
+        `Imported ${ws.habits.length} ${ws.habits.length === 1 ? 'habit' : 'habits'} and ${ws.completions.length} records.`
+      );
       return true;
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to delete account.';
+      const message = error instanceof Error ? error.message : 'Unable to import backup file.';
+      get().showToast('error', message);
+      return false;
+    }
+  },
+
+  resetAllData: async () => {
+    try {
+      const tz = getBrowserTimezone();
+      const ws = await resetAllLocalData(tz);
+      applyThemeToDom(ws.settings.theme);
+      const todayStr = getTodayInTimezone(ws.settings.timezone);
+
+      set({
+        schemaVersion: ws.schemaVersion,
+        profile: ws.profile,
+        settings: ws.settings,
+        habits: [],
+        completions: [],
+        selectedDate: todayStr,
+        selectedHabitId: null,
+        activeTab: 'home',
+        activeScreen: 'home',
+        showOnboardingPreview: false,
+      });
+
+      get().showToast('success', 'All local data has been reset.');
+      return true;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to reset local data.';
       get().showToast('error', message);
       return false;
     }

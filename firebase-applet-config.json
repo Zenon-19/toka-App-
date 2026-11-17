@@ -3,6 +3,7 @@
   "appId": "1:1022429719963:web:0397e9e29241f4aa78053e",
   "apiKey": "AIzaSyDmcdotsXYKjIhjCS3XX64u84VFpVD06tQ",
   "authDomain": "dark-truth-x8f9p.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-toka-163b79d2-2626-42ea-b795-f88b5d4c55dc",
   "storageBucket": "dark-truth-x8f9p.firebasestorage.app",
   "messagingSenderId": "1022429719963",
   "measurementId": "",

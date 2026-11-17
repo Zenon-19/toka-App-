@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
 import { ToastBanner } from './components/ToastBanner.tsx';
 import { useNotificationScheduler } from './hooks/useNotificationScheduler.ts';
-import { auth } from './lib/firebase.ts';
 import { AppShell } from './navigation/AppShell.tsx';
-import { AuthScreen } from './screens/AuthScreen.tsx';
 import { CalendarScreen } from './screens/CalendarScreen.tsx';
 import { CreateHabitScreen } from './screens/CreateHabitScreen.tsx';
 import { EditHabitScreen } from './screens/EditHabitScreen.tsx';
@@ -17,18 +14,18 @@ import { OnboardingScreen } from './screens/OnboardingScreen.tsx';
 import { ProfileScreen } from './screens/ProfileScreen.tsx';
 import { SettingsScreen } from './screens/SettingsScreen.tsx';
 import { SplashScreen } from './screens/SplashScreen.tsx';
-import { setInMemoryToken } from './services/api.ts';
 import { useTokaStore } from './store/useTokaStore.ts';
 
-function AuthenticatedWorkspace() {
+function WorkspaceApp() {
   useNotificationScheduler();
 
   const activeScreen = useTokaStore((s) => s.activeScreen);
   const settings = useTokaStore((s) => s.settings);
   const workspaceLoading = useTokaStore((s) => s.workspaceLoading);
+  const workspaceError = useTokaStore((s) => s.workspaceError);
   const showOnboardingPreview = useTokaStore((s) => s.showOnboardingPreview);
 
-  if (workspaceLoading && !settings) {
+  if (workspaceLoading && !settings && !workspaceError) {
     return <SplashScreen />;
   }
 
@@ -69,47 +66,24 @@ function AuthenticatedWorkspace() {
 }
 
 export default function App() {
-  const firebaseUser = useTokaStore((s) => s.firebaseUser);
-  const authInitialized = useTokaStore((s) => s.authInitialized);
-  const setFirebaseUser = useTokaStore((s) => s.setFirebaseUser);
-  const setAuthInitialized = useTokaStore((s) => s.setAuthInitialized);
+  const workspaceInitialized = useTokaStore((s) => s.workspaceInitialized);
   const loadWorkspace = useTokaStore((s) => s.loadWorkspace);
 
   const [splashMinDone, setSplashMinDone] = useState(false);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setSplashMinDone(true), 450);
+    const timer = window.setTimeout(() => setSplashMinDone(true), 600);
     return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setFirebaseUser(user);
-      if (user) {
-        try {
-          const token = await user.getIdToken();
-          setInMemoryToken(token);
-          await loadWorkspace();
-        } catch (err) {
-          console.error('Failed to bootstrap session:', err);
-        }
-      }
-      setAuthInitialized(true);
-    });
-
-    return () => unsubscribe();
-  }, [setFirebaseUser, setAuthInitialized, loadWorkspace]);
+    loadWorkspace();
+  }, [loadWorkspace]);
 
   return (
     <>
       <ToastBanner />
-      {!authInitialized || !splashMinDone ? (
-        <SplashScreen />
-      ) : !firebaseUser ? (
-        <AuthScreen />
-      ) : (
-        <AuthenticatedWorkspace />
-      )}
+      {!workspaceInitialized || !splashMinDone ? <SplashScreen /> : <WorkspaceApp />}
     </>
   );
 }

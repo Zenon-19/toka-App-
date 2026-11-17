@@ -6,7 +6,9 @@ import {
   HABIT_ICON_NAMES,
   WEEKDAYS_SHORT,
 } from '../constants/habits.ts';
+import { useTokaStore } from '../store/useTokaStore.ts';
 import type { HabitCategory, HabitFrequency, HabitInput } from '../types/index.ts';
+import { getBrowserTimezone, getTodayInTimezone } from '../utils/date.ts';
 import { HabitIcon } from './HabitIcon.tsx';
 
 interface HabitFormProps {
@@ -39,11 +41,12 @@ export function HabitForm({
   const [reminderEnabled, setReminderEnabled] = useState<boolean>(
     Boolean(initialValues?.reminderTime)
   );
+  const timezone = useTokaStore((s) => s.settings?.timezone) || getBrowserTimezone();
   const [reminderTime, setReminderTime] = useState<string>(
     initialValues?.reminderTime || '08:00'
   );
   const [startDate, setStartDate] = useState<string>(
-    initialValues?.startDate || new Date().toISOString().slice(0, 10)
+    initialValues?.startDate || getTodayInTimezone(timezone)
   );
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -149,9 +152,9 @@ export function HabitForm({
                 key={cat}
                 type="button"
                 onClick={() => setCategory(cat)}
-                className={`min-h-[44px] px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-left transition-colors truncate border ${
+                className={`min-h-[44px] px-3 py-2 rounded-xl text-xs sm:text-sm font-medium text-left transition-colors truncate border focus-visible:outline-2 focus-visible:outline-[#C6FF69] focus-visible:outline-offset-2 ${
                   active
-                    ? 'bg-[#C6FF69] text-[#121512] border-[#C6FF69]'
+                    ? 'bg-[#C6FF69]/12 text-[var(--toka-text-primary)] border-[#C6FF69]'
                     : 'bg-[var(--toka-bg-secondary)] text-[var(--toka-text-secondary)] border-[var(--toka-border)] hover:text-[var(--toka-text-primary)]'
                 }`}
               >
@@ -175,9 +178,10 @@ export function HabitForm({
                 type="button"
                 onClick={() => setIcon(iconName)}
                 aria-label={`Select ${iconName} icon`}
-                className={`min-h-[44px] rounded-xl flex items-center justify-center border transition-colors ${
+                aria-pressed={active}
+                className={`min-h-[44px] rounded-xl flex items-center justify-center border transition-colors focus-visible:outline-2 focus-visible:outline-[#C6FF69] focus-visible:outline-offset-2 ${
                   active
-                    ? 'bg-[#C6FF69] text-[#121512] border-[#C6FF69]'
+                    ? 'bg-[#C6FF69]/12 text-[var(--toka-accent-text)] border-[#C6FF69]'
                     : 'bg-[var(--toka-bg-secondary)] text-[var(--toka-text-secondary)] border-[var(--toka-border)] hover:text-[var(--toka-text-primary)]'
                 }`}
               >
@@ -227,9 +231,9 @@ export function HabitForm({
                   type="button"
                   onClick={() => toggleDay(idx)}
                   aria-pressed={selected}
-                  className={`min-h-[44px] rounded-xl text-sm font-semibold border transition-colors ${
+                  className={`min-h-[44px] rounded-xl text-sm font-semibold border transition-colors focus-visible:outline-2 focus-visible:outline-[#C6FF69] focus-visible:outline-offset-2 ${
                     selected
-                      ? 'bg-[#C6FF69] text-[#121512] border-[#C6FF69]'
+                      ? 'bg-[#C6FF69]/12 text-[var(--toka-accent-text)] border-[#C6FF69]'
                       : 'bg-[var(--toka-bg-secondary)] text-[var(--toka-text-secondary)] border-[var(--toka-border)] hover:text-[var(--toka-text-primary)]'
                   }`}
                 >
@@ -254,12 +258,12 @@ export function HabitForm({
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="w-full min-h-[46px] px-4 py-2 rounded-xl bg-[var(--toka-bg-secondary)] border border-[var(--toka-border)] text-[var(--toka-text-primary)] font-mono-num focus:outline-none focus:border-[#C6FF69]"
+            className="w-full min-h-[46px] px-4 py-2 rounded-xl bg-[var(--toka-bg-secondary)] border border-[var(--toka-border)] text-[var(--toka-text-primary)] tabular-nums focus:outline-none focus:border-[#C6FF69]"
           />
         </div>
 
         <div>
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-1">
             <label
               htmlFor="habit-reminder-time"
               className="text-sm font-medium text-[var(--toka-text-primary)]"
@@ -270,16 +274,21 @@ export function HabitForm({
               type="button"
               role="switch"
               aria-checked={reminderEnabled}
+              aria-label="Toggle daily reminder"
               onClick={() => setReminderEnabled((v) => !v)}
-              className={`w-11 h-6 rounded-full transition-colors p-0.5 ${
-                reminderEnabled ? 'bg-[#C6FF69]' : 'bg-[var(--toka-border)]'
-              }`}
+              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-end focus-visible:outline-2 focus-visible:outline-[#C6FF69] focus-visible:outline-offset-2 rounded-lg"
             >
               <span
-                className={`block w-5 h-5 rounded-full bg-[#121512] transition-transform ${
-                  reminderEnabled ? 'translate-x-5' : 'translate-x-0'
+                className={`w-11 h-6 rounded-full transition-colors p-0.5 inline-flex items-center ${
+                  reminderEnabled ? 'bg-[#C6FF69]' : 'bg-[var(--toka-border)]'
                 }`}
-              />
+              >
+                <span
+                  className={`block w-5 h-5 rounded-full bg-[#121512] transition-transform ${
+                    reminderEnabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </span>
             </button>
           </div>
           <input
@@ -288,7 +297,7 @@ export function HabitForm({
             disabled={!reminderEnabled}
             value={reminderTime}
             onChange={(e) => setReminderTime(e.target.value)}
-            className="w-full min-h-[46px] px-4 py-2 rounded-xl bg-[var(--toka-bg-secondary)] border border-[var(--toka-border)] text-[var(--toka-text-primary)] font-mono-num focus:outline-none focus:border-[#C6FF69] disabled:opacity-40"
+            className="w-full min-h-[46px] px-4 py-2 rounded-xl bg-[var(--toka-bg-secondary)] border border-[var(--toka-border)] text-[var(--toka-text-primary)] tabular-nums focus:outline-none focus:border-[#C6FF69] disabled:opacity-40"
           />
         </div>
       </div>

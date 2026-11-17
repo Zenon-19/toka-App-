@@ -70,9 +70,9 @@ export function HabitsScreen() {
           <button
             type="button"
             onClick={() => setStatusFilter('active')}
-            className={`min-h-[38px] px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap shrink-0 ${
+            className={`min-h-[44px] px-4 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69] ${
               statusFilter === 'active'
-                ? 'bg-[#C6FF69] text-[#121512]'
+                ? 'bg-[var(--toka-bg-secondary)] text-[var(--toka-text-primary)]'
                 : 'text-[var(--toka-text-secondary)] hover:text-[var(--toka-text-primary)]'
             }`}
           >
@@ -81,9 +81,9 @@ export function HabitsScreen() {
           <button
             type="button"
             onClick={() => setStatusFilter('archived')}
-            className={`min-h-[38px] px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap shrink-0 ${
+            className={`min-h-[44px] px-4 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69] ${
               statusFilter === 'archived'
-                ? 'bg-[#C6FF69] text-[#121512]'
+                ? 'bg-[var(--toka-bg-secondary)] text-[var(--toka-text-primary)]'
                 : 'text-[var(--toka-text-secondary)] hover:text-[var(--toka-text-primary)]'
             }`}
           >
@@ -112,18 +112,18 @@ export function HabitsScreen() {
         {['All', ...HABIT_CATEGORIES].map((cat) => {
           const active = categoryFilter === cat;
           return (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setCategoryFilter(cat)}
-              className={`min-h-[38px] px-3.5 py-1.5 rounded-xl text-xs font-medium border transition-colors whitespace-nowrap shrink-0 ${
-                active
-                  ? 'bg-[var(--toka-text-primary)] text-[var(--toka-bg-primary)] border-transparent'
-                  : 'bg-[var(--toka-bg-card)] text-[var(--toka-text-secondary)] border-[var(--toka-border)] hover:text-[var(--toka-text-primary)]'
-              }`}
-            >
-              {cat}
-            </button>
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setCategoryFilter(cat)}
+                className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-medium border transition-colors whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69] ${
+                  active
+                    ? 'bg-[var(--toka-text-primary)] text-[var(--toka-bg-primary)] border-transparent'
+                    : 'bg-[var(--toka-bg-card)] text-[var(--toka-text-secondary)] border-[var(--toka-border)] hover:text-[var(--toka-text-primary)]'
+                }`}
+              >
+                {cat}
+              </button>
           );
         })}
       </div>
@@ -174,8 +174,11 @@ export function HabitsScreen() {
                       {habit.category} · {formatFrequencySummary(habit)}
                       {habit.reminderTime ? ` · ${habit.reminderTime}` : ''}
                     </div>
-                    <div className="mt-1 font-mono-num text-xs text-[var(--toka-accent-text)]">
-                      {stats?.completionRate ?? 0}% consistency · {stats?.currentStreak ?? 0}d streak
+                    <div className="mt-1 tabular-nums text-xs text-[var(--toka-accent-text)]">
+                      {stats?.completionRate ?? 0}% consistency
+                      {(stats?.currentStreak ?? 0) >= 2
+                        ? ` · ${stats?.currentStreak}d streak`
+                        : ''}
                     </div>
                   </div>
                 </div>
@@ -188,7 +191,7 @@ export function HabitsScreen() {
                     type="button"
                     onClick={() => navigateToScreen('edit-habit', habit.id)}
                     aria-label={`Edit ${habit.title}`}
-                    className="min-h-[40px] min-w-[40px] rounded-xl flex items-center justify-center text-[var(--toka-text-secondary)] hover:text-[var(--toka-text-primary)] hover:bg-[var(--toka-bg-secondary)] transition-colors"
+                    className="min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center text-[var(--toka-text-secondary)] hover:text-[var(--toka-text-primary)] hover:bg-[var(--toka-bg-secondary)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69]"
                   >
                     <Pencil size={16} />
                   </button>
@@ -204,7 +207,7 @@ export function HabitsScreen() {
                         ? `Archive ${habit.title}`
                         : `Restore ${habit.title}`
                     }
-                    className="min-h-[40px] min-w-[40px] rounded-xl flex items-center justify-center text-[var(--toka-text-secondary)] hover:text-[var(--toka-text-primary)] hover:bg-[var(--toka-bg-secondary)] transition-colors"
+                    className="min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center text-[var(--toka-text-secondary)] hover:text-[var(--toka-text-primary)] hover:bg-[var(--toka-bg-secondary)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69]"
                   >
                     {habit.status === 'active' ? (
                       <Archive size={16} />
@@ -216,7 +219,7 @@ export function HabitsScreen() {
                     type="button"
                     onClick={() => setHabitToDelete(habit)}
                     aria-label={`Delete ${habit.title}`}
-                    className="min-h-[40px] min-w-[40px] rounded-xl flex items-center justify-center text-[var(--toka-text-secondary)] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    className="min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center text-[var(--toka-text-secondary)] hover:text-red-400 hover:bg-red-500/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
                   >
                     <Trash2 size={16} />
                   </button>

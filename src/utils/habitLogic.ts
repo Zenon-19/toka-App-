@@ -212,3 +212,86 @@ export function calculateOverallStreaks(
 
   return { currentStreak: current, bestStreak: best };
 }
+
+const FULL_WEEKDAY_NAMES = [
+  'Sundays',
+  'Mondays',
+  'Tuesdays',
+  'Wednesdays',
+  'Thursdays',
+  'Fridays',
+  'Saturdays',
+] as const;
+
+export function getBestDayOfWeek(
+  habits: StreakSchedulableHabit[],
+  lookup: Map<string, boolean>,
+  todayStr: string
+): {
+  dayIndex: number;
+  dayName: string;
+  completionRate: number;
+  completedCount: number;
+  scheduledCount: number;
+} | null {
+  const activeHabits = habits.filter((h) => h.status !== 'archived');
+  if (activeHabits.length === 0) return null;
+
+  const earliestStart = activeHabits.reduce(
+    (min, h) => (h.startDate < min ? h.startDate : min),
+    todayStr
+  );
+  const dates = getDateRange(earliestStart, todayStr);
+  if (dates.length === 0) return null;
+
+  const buckets = Array.from({ length: 7 }, () => ({ completed: 0, scheduled: 0 }));
+
+  for (const dateStr of dates) {
+    const dayIdx = getDayOfWeekUTC(dateStr);
+    for (const h of activeHabits) {
+      if (isHabitScheduledOnDate(h, dateStr)) {
+        buckets[dayIdx].scheduled += 1;
+        if (isHabitCompletedOnDate(lookup, h.id, dateStr)) {
+          buckets[dayIdx].completed += 1;
+        }
+      }
+    }
+  }
+
+  let bestIdx = -1;
+  let bestRate = -1;
+  let bestCompleted = 0;
+
+  for (let i = 0; i < 7; i++) {
+    const { completed, scheduled } = buckets[i];
+    if (scheduled === 0 || completed === 0) continue;
+    const rate = Math.round((completed / scheduled) * 100);
+    if (rate > bestRate || (rate === bestRate && completed > bestCompleted)) {
+      bestIdx = i;
+      bestRate = rate;
+      bestCompleted = completed;
+    }
+  }
+
+  if (bestIdx === -1) return null;
+
+  return {
+    dayIndex: bestIdx,
+    dayName: FULL_WEEKDAY_NAMES[bestIdx],
+    completionRate: bestRate,
+    completedCount: buckets[bestIdx].completed,
+    scheduledCount: buckets[bestIdx].scheduled,
+  };
+}
+
+export type TimeOfDayBucket = 'Morning' | 'Afternoon' | 'Evening';
+
+export function getTimeOfDayBucket(reminderTime: string | null): TimeOfDayBucket {
+  if (!reminderTime || !/^\d{2}:\d{2}$/.test(reminderTime)) {
+    return 'Morning';
+  }
+  const hour = Number(reminderTime.slice(0, 2));
+  if (hour < 12) return 'Morning';
+  if (hour < 17) return 'Afternoon';
+  return 'Evening';
+}

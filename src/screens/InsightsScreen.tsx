@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Calendar, Flame, TrendingUp } from 'lucide-react';
+import { Award, Calendar, Flame, TrendingUp } from 'lucide-react';
 import { HabitIcon } from '../components/HabitIcon.tsx';
 import {
   Last7DaysRechartsBar,
+  MonthlyTrendRechartsBar,
   WeeklyConsistencyOverTimeChart,
 } from '../components/WeeklyConsistencyChart.tsx';
 import { useHabitData } from '../hooks/useHabitData.ts';
@@ -17,6 +18,7 @@ export function InsightsScreen() {
     habitStatsMap,
     todaySummary,
     overallStreaks,
+    bestDayOfWeek,
     totalCompletedCount,
     weeklySeries,
     weeklyConsistencySeries,
@@ -85,53 +87,68 @@ export function InsightsScreen() {
         <button
           type="button"
           onClick={() => navigateToScreen('calendar')}
-          className="min-h-[44px] px-4 py-2 rounded-xl border border-[var(--toka-border)] bg-[var(--toka-bg-card)] text-sm font-medium text-[var(--toka-text-primary)] hover:bg-[var(--toka-bg-secondary)] inline-flex items-center gap-2 transition-colors self-start whitespace-nowrap shrink-0"
+          className="min-h-[44px] px-4 py-2 rounded-xl border border-[var(--toka-border)] bg-[var(--toka-bg-card)] text-sm font-medium text-[var(--toka-text-primary)] hover:bg-[var(--toka-bg-secondary)] inline-flex items-center gap-2 transition-colors self-start whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69]"
         >
           <Calendar size={16} className="text-[var(--toka-text-secondary)]" />
           <span>Full Calendar</span>
         </button>
       </div>
 
-      {/* 4 Primary KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Primary KPI Cards (including Best day of week) */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="rounded-2xl bg-[var(--toka-bg-card)] border border-[var(--toka-border)] p-5">
           <div className="text-xs text-[var(--toka-text-secondary)]">Today&apos;s rate</div>
-          <div className="mt-2 font-mono-num text-2xl sm:text-3xl font-semibold text-[var(--toka-accent-text)]">
+          <div className="mt-2 tabular-nums text-2xl sm:text-3xl font-semibold text-[var(--toka-accent-text)]">
             {todaySummary.percentage}%
           </div>
-          <div className="mt-1 text-xs text-[var(--toka-text-secondary)] font-mono-num">
+          <div className="mt-1 text-xs text-[var(--toka-text-secondary)] tabular-nums">
             {todaySummary.completedCount} / {todaySummary.scheduledCount} habits
           </div>
         </div>
 
         <div className="rounded-2xl bg-[var(--toka-bg-card)] border border-[var(--toka-border)] p-5">
           <div className="text-xs text-[var(--toka-text-secondary)]">Current streak</div>
-          <div className="mt-2 font-mono-num text-2xl sm:text-3xl font-semibold text-[var(--toka-text-primary)] flex items-center gap-2">
+          <div className="mt-2 tabular-nums text-2xl sm:text-3xl font-semibold text-[var(--toka-text-primary)] flex items-center gap-2">
             <span>{overallStreaks.currentStreak}d</span>
-            <Flame size={20} className="text-[var(--toka-accent-text)]" />
+            <Flame size={20} className="text-[var(--toka-accent-text)]" aria-hidden="true" />
           </div>
           <div className="mt-1 text-xs text-[var(--toka-text-secondary)]">
-            100% scheduled days
+            {overallStreaks.currentStreak === 0
+              ? 'Complete a habit today to start one.'
+              : '100% scheduled days'}
           </div>
         </div>
 
         <div className="rounded-2xl bg-[var(--toka-bg-card)] border border-[var(--toka-border)] p-5">
           <div className="text-xs text-[var(--toka-text-secondary)]">Best streak</div>
-          <div className="mt-2 font-mono-num text-2xl sm:text-3xl font-semibold text-[var(--toka-text-primary)]">
+          <div className="mt-2 tabular-nums text-2xl sm:text-3xl font-semibold text-[var(--toka-text-primary)]">
             {overallStreaks.bestStreak}d
           </div>
           <div className="mt-1 text-xs text-[var(--toka-text-secondary)]">
-            Historical personal record
+            Personal record
           </div>
         </div>
 
         <div className="rounded-2xl bg-[var(--toka-bg-card)] border border-[var(--toka-border)] p-5">
           <div className="text-xs text-[var(--toka-text-secondary)]">Total completed</div>
-          <div className="mt-2 font-mono-num text-2xl sm:text-3xl font-semibold text-[var(--toka-text-primary)]">
+          <div className="mt-2 tabular-nums text-2xl sm:text-3xl font-semibold text-[var(--toka-text-primary)]">
             {totalCompletedCount}
           </div>
-          <div className="mt-1 text-xs text-[var(--toka-text-secondary)] font-mono-num">
+          <div className="mt-1 text-xs text-[var(--toka-text-secondary)] tabular-nums">
             Across {activeHabits.length} active
+          </div>
+        </div>
+
+        <div className="col-span-2 lg:col-span-1 rounded-2xl bg-[var(--toka-bg-card)] border border-[var(--toka-border)] p-5">
+          <div className="text-xs text-[var(--toka-text-secondary)]">Best day of week</div>
+          <div className="mt-2 text-xl sm:text-2xl font-semibold text-[var(--toka-text-primary)] flex items-center gap-2 truncate">
+            <Award size={18} className="text-[var(--toka-accent-text)] shrink-0" aria-hidden="true" />
+            <span className="truncate">{bestDayOfWeek ? bestDayOfWeek.dayName : '—'}</span>
+          </div>
+          <div className="mt-1 text-xs text-[var(--toka-text-secondary)] tabular-nums">
+            {bestDayOfWeek
+              ? `${bestDayOfWeek.completionRate}% avg completion`
+              : 'No completions yet'}
           </div>
         </div>
       </div>
@@ -148,8 +165,8 @@ export function InsightsScreen() {
                 8-week habit consistency trajectory
               </p>
             </div>
-            <span className="font-mono-num text-sm font-semibold text-[var(--toka-accent-text)] inline-flex items-center gap-1">
-              <TrendingUp size={14} />
+            <span className="tabular-nums text-sm font-semibold text-[var(--toka-accent-text)] inline-flex items-center gap-1">
+              <TrendingUp size={14} aria-hidden="true" />
               {eightWeekAverage}% avg
             </span>
           </div>
@@ -170,7 +187,7 @@ export function InsightsScreen() {
                 Last 7 days scheduled completion rate
               </p>
             </div>
-            <span className="font-mono-num text-sm font-semibold text-[var(--toka-accent-text)]">
+            <span className="tabular-nums text-sm font-semibold text-[var(--toka-accent-text)]">
               {weeklyAverage}% avg
             </span>
           </div>
@@ -179,47 +196,24 @@ export function InsightsScreen() {
         </div>
       </div>
 
-      {/* Monthly 30-day Completion Chart */}
+      {/* Monthly 30-day Completion Chart (Recharts) */}
       <div className="rounded-2xl bg-[var(--toka-bg-card)] border border-[var(--toka-border)] p-5 sm:p-6">
-          <div className="flex items-baseline justify-between mb-5">
-            <div>
-              <h2 className="text-base font-semibold text-[var(--toka-text-primary)]">
-                Monthly trend
-              </h2>
-              <p className="text-xs text-[var(--toka-text-secondary)] mt-0.5">
-                30-day completion rate trajectory
-              </p>
-            </div>
-            <span className="font-mono-num text-sm font-semibold text-[var(--toka-accent-text)] inline-flex items-center gap-1">
-              <TrendingUp size={14} />
-              {monthlyAverage}% avg
-            </span>
+        <div className="flex items-baseline justify-between mb-4">
+          <div>
+            <h2 className="text-base font-semibold text-[var(--toka-text-primary)]">
+              Monthly trend
+            </h2>
+            <p className="text-xs text-[var(--toka-text-secondary)] mt-0.5">
+              30-day completion rate trajectory
+            </p>
           </div>
+          <span className="tabular-nums text-sm font-semibold text-[var(--toka-accent-text)] inline-flex items-center gap-1">
+            <TrendingUp size={14} aria-hidden="true" />
+            {monthlyAverage}% avg
+          </span>
+        </div>
 
-          <div className="h-44 flex items-end gap-[3px] pt-6">
-            {monthlySeries.map((day) => (
-              <div
-                key={day.date}
-                className="flex-1 h-full flex items-end group relative"
-                title={`${day.date}: ${day.completedCount}/${day.scheduledCount} (${day.percentage}%)`}
-              >
-                <div
-                  className={`w-full rounded-t transition-all ${
-                    day.percentage === 100
-                      ? 'bg-[#C6FF69]'
-                      : day.percentage > 0
-                      ? 'bg-[#C6FF69]/55'
-                      : 'bg-[var(--toka-border)]'
-                  }`}
-                  style={{ height: `${Math.max(day.percentage, 4)}%` }}
-                />
-              </div>
-            ))}
-          </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] font-mono-num text-[var(--toka-text-secondary)]">
-            <span>{formatShortDate(monthlySeries[0]?.date || '')}</span>
-            <span>{formatShortDate(monthlySeries[monthlySeries.length - 1]?.date || '')}</span>
-          </div>
+        <MonthlyTrendRechartsBar data={monthlySeries} />
       </div>
 
       {/* 12-Week Calendar Heatmap */}
@@ -235,7 +229,7 @@ export function InsightsScreen() {
                 : 'Hover or tap any cell to inspect daily completion ratio'}
             </p>
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-[var(--toka-text-secondary)]">
+          <div className="flex items-center gap-1.5 text-xs text-[var(--toka-text-secondary)]">
             <span>Less</span>
             <span className="w-3.5 h-3.5 rounded bg-[var(--toka-bg-secondary)] border border-[var(--toka-border)]" />
             <span className="w-3.5 h-3.5 rounded bg-[#C6FF69]/30" />
@@ -269,7 +263,7 @@ export function InsightsScreen() {
                       onFocus={() => setHoveredHeatDate(day)}
                       onClick={() => setHoveredHeatDate(day)}
                       aria-label={`${day.date}: ${day.completedCount} of ${day.scheduledCount} completed`}
-                      className={`w-full aspect-square rounded-md transition-transform hover:scale-110 ${cellBg}`}
+                      className={`w-full aspect-square rounded-md transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69] ${cellBg}`}
                     />
                   );
                 })}
@@ -287,7 +281,7 @@ export function InsightsScreen() {
 
         {habitLeaderboard.length === 0 ? (
           <p className="text-sm text-[var(--toka-text-secondary)] py-4">
-            Create and track habits to unlock individual performance analytics.
+            Complete a habit to unlock individual performance analytics.
           </p>
         ) : (
           <div className="divide-y divide-[var(--toka-border)]">
@@ -296,7 +290,7 @@ export function InsightsScreen() {
                 key={habit.id}
                 type="button"
                 onClick={() => navigateToScreen('habit-details', habit.id)}
-                className="w-full py-3.5 flex items-center justify-between gap-4 text-left hover:bg-[var(--toka-bg-secondary)]/50 px-2 -mx-2 rounded-xl transition-colors"
+                className="w-full min-h-[52px] py-3.5 flex items-center justify-between gap-4 text-left hover:bg-[var(--toka-bg-secondary)]/50 px-2 -mx-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69]"
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="w-9 h-9 rounded-xl bg-[var(--toka-bg-secondary)] flex items-center justify-center shrink-0 text-[var(--toka-text-primary)]">
@@ -321,7 +315,7 @@ export function InsightsScreen() {
                       style={{ width: `${stats.completionRate}%` }}
                     />
                   </div>
-                  <span className="font-mono-num text-sm font-semibold text-[var(--toka-text-primary)] w-12 text-right">
+                  <span className="tabular-nums text-sm font-semibold text-[var(--toka-text-primary)] w-12 text-right">
                     {stats.completionRate}%
                   </span>
                 </div>

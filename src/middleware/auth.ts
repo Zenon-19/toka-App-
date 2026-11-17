@@ -2,9 +2,22 @@ import type { NextFunction, Request, Response } from 'express';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { adminAuth } from '../lib/firebase-admin.ts';
 
-export interface AuthRequest extends Request {
-  user?: DecodedIdToken;
+export interface WorkspaceUser {
+  uid: string;
+  email?: string;
+  name?: string;
+  picture?: string;
 }
+
+export interface AuthRequest extends Request {
+  user?: DecodedIdToken | WorkspaceUser;
+}
+
+const DEFAULT_WORKSPACE_USER: WorkspaceUser = {
+  uid: 'toka-local-workspace',
+  email: '',
+  name: 'TOKA Member',
+};
 
 export const requireAuth = async (
   req: AuthRequest,
@@ -13,13 +26,15 @@ export const requireAuth = async (
 ) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Unauthorized: Missing token' });
+    req.user = DEFAULT_WORKSPACE_USER;
+    next();
     return;
   }
 
   const token = authHeader.slice(7).trim();
   if (!token) {
-    res.status(401).json({ error: 'Unauthorized: Empty token' });
+    req.user = DEFAULT_WORKSPACE_USER;
+    next();
     return;
   }
 

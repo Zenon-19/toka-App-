@@ -54,7 +54,7 @@ export function MonthlyCalendar({
             type="button"
             onClick={handlePrev}
             aria-label="Previous month"
-            className="min-h-[40px] min-w-[40px] rounded-xl flex items-center justify-center border border-[var(--toka-border)] text-[var(--toka-text-secondary)] hover:text-[var(--toka-text-primary)] hover:bg-[var(--toka-bg-secondary)] transition-colors"
+            className="min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center border border-[var(--toka-border)] text-[var(--toka-text-secondary)] hover:text-[var(--toka-text-primary)] hover:bg-[var(--toka-bg-secondary)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69]"
           >
             <ChevronLeft size={18} />
           </button>
@@ -62,7 +62,7 @@ export function MonthlyCalendar({
             type="button"
             onClick={handleNext}
             aria-label="Next month"
-            className="min-h-[40px] min-w-[40px] rounded-xl flex items-center justify-center border border-[var(--toka-border)] text-[var(--toka-text-secondary)] hover:text-[var(--toka-text-primary)] hover:bg-[var(--toka-bg-secondary)] transition-colors"
+            className="min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center border border-[var(--toka-border)] text-[var(--toka-text-secondary)] hover:text-[var(--toka-text-primary)] hover:bg-[var(--toka-bg-secondary)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69]"
           >
             <ChevronRight size={18} />
           </button>
@@ -113,22 +113,20 @@ export function MonthlyCalendar({
               type="button"
               onClick={() => onSelectDate(cell.dateStr)}
               aria-label={`${cell.dateStr} (${state})`}
-              className={`relative min-h-[44px] rounded-xl flex flex-col items-center justify-center text-xs font-mono-num transition-all ${bgClass} ${
+              className={`relative min-h-[44px] rounded-xl flex flex-col items-center justify-center text-xs tabular-nums transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6FF69] ${bgClass} ${
                 isSelected ? 'ring-2 ring-[var(--toka-text-primary)] ring-offset-1 ring-offset-[var(--toka-bg-card)]' : ''
               }`}
             >
               <span>{cell.dayNumber}</span>
               {cell.inCurrentMonth && marker ? (
-                <span className="text-[9px] leading-none mt-0.5 opacity-85" aria-hidden="true">
+                <span className="text-xs leading-none mt-0.5 opacity-90" aria-hidden="true">
                   {marker}
                 </span>
               ) : isToday ? (
                 <span
-                  className="text-[9px] leading-none mt-0.5 font-sans font-semibold"
+                  className="w-1.5 h-1.5 rounded-full bg-[#C6FF69] mt-1"
                   aria-label="Today"
-                >
-                  •
-                </span>
+                />
               ) : null}
             </button>
           );
@@ -138,19 +136,19 @@ export function MonthlyCalendar({
       {/* Explicit non-hue-only legend */}
       <div className="mt-4 pt-3 border-t border-[var(--toka-border)] flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[var(--toka-text-secondary)]">
         <span className="inline-flex items-center gap-1.5">
-          <span className="w-4 h-4 rounded bg-[#C6FF69] text-[#121512] inline-flex items-center justify-center text-[10px] font-bold">
+          <span className="w-4 h-4 rounded bg-[#C6FF69] text-[#121512] inline-flex items-center justify-center text-xs font-bold">
             ✓
           </span>
           Completed
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="w-4 h-4 rounded bg-[#C6FF69]/20 border border-[#C6FF69]/40 text-[var(--toka-text-primary)] inline-flex items-center justify-center text-[10px]">
+          <span className="w-4 h-4 rounded bg-[#C6FF69]/20 border border-[#C6FF69]/40 text-[var(--toka-text-primary)] inline-flex items-center justify-center text-xs">
             ◐
           </span>
           Partial
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="w-4 h-4 rounded bg-red-500/15 border border-red-500/30 text-red-400 inline-flex items-center justify-center text-[10px]">
+          <span className="w-4 h-4 rounded bg-red-500/15 border border-red-500/30 text-red-400 inline-flex items-center justify-center text-xs">
             ×
           </span>
           Missed
